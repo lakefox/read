@@ -16,15 +16,17 @@ window.speechSynthesis.cancel();
 
 export class Dialog extends State {
   constructor(page) {
-    let { val, listen, f } = super();
+    let { $, listen, f } = super();
+    document.body.style["overflow"] = "hidden";
+    window.scrollTo(0, 0);
 
     let timeOut;
 
-    val("body", document.body);
-    val("play", true);
-    val("current", page.current);
-    val("sleep", 0);
-    val("settings", {
+    $("body", document.body);
+    $("play", true);
+    $("current", page.current);
+    $("sleep", 0);
+    $("settings", {
       lang: "en-US",
       voice: "Nicky",
       pitch: 1.2,
@@ -33,21 +35,21 @@ export class Dialog extends State {
     });
 
     if (localStorage.settings) {
-      val("settings", JSON.parse(localStorage.settings));
+      $("settings", JSON.parse(localStorage.settings));
     }
 
     let text = div`class="${css.text}" innerText="${
       page.paragraphs[page.current]
     }"`;
     let controls = button`class="${css.controls}"`.on("click", () => {
-      val("play", !val("play"));
+      $("play", !$("play"));
     });
     let back = button`class="${css.dir}" innerHTML="&#9664;&#9664;"`.on(
       "click",
       () => {
         window.speechSynthesis.cancel();
 
-        val("current", Math.max(val("current") - 1, 0));
+        $("current", Math.max($("current") - 1, 0));
       }
     );
     let forward = button`class="${css.dir}" innerHTML="&#9654;&#9654;"`.on(
@@ -55,10 +57,7 @@ export class Dialog extends State {
       () => {
         window.speechSynthesis.cancel();
 
-        val(
-          "current",
-          Math.min(val("current") + 1, page.paragraphs.length - 1)
-        );
+        $("current", Math.min($("current") + 1, page.paragraphs.length - 1));
       }
     );
 
@@ -74,6 +73,7 @@ export class Dialog extends State {
                           "click",
                           () => {
                             window.speechSynthesis.cancel();
+                            document.body.style["overflow"] = "inherit";
                             document.querySelector("." + css.dialog).remove();
                           }
                         )}
@@ -86,7 +86,7 @@ export class Dialog extends State {
                               () => {
                                 prompt2("Time Until Sleep", "text", 10).then(
                                   (time) => {
-                                    val("sleep", parseInt(time));
+                                    $("sleep", parseInt(time));
                                   }
                                 );
                               }
@@ -97,8 +97,8 @@ export class Dialog extends State {
                             ${div`class="${css.settings}" innerHTML="&#9881;"`.on(
                               "click",
                               () => {
-                                prompt3(val("settings")).then((settings) => {
-                                  val("settings", settings);
+                                prompt3($("settings")).then((settings) => {
+                                  $("settings", settings);
                                 });
                               }
                             )}
@@ -108,16 +108,16 @@ export class Dialog extends State {
     // timeout 5/15/30/1 hour
     document.body.appendChild(d);
 
-    play(page, val);
+    play(page, $);
 
     f((e) => {
       if (e.play) {
         controls.innerHTML = "&#10074;&#10074;";
-        play(page, val);
+        play(page, $);
         if (e.sleep > 0) {
           timeOut = setTimeout(() => {
             window.speechSynthesis.cancel();
-            val("play", false);
+            $("play", false);
           }, e.sleep * 600);
         }
       } else {
@@ -131,9 +131,9 @@ export class Dialog extends State {
       page.current = current;
       text.innerText = page.paragraphs[page.current];
       localStorage.setItem(page.id, JSON.stringify(page));
-      if (val("play")) {
-        console.log(val("current"));
-        play(page, val);
+      if ($("play")) {
+        console.log($("current"));
+        play(page, $);
       }
     });
 
@@ -142,7 +142,7 @@ export class Dialog extends State {
         clearTimeout(timeOut);
         timeOut = setTimeout(() => {
           window.speechSynthesis.cancel();
-          val("play", false);
+          $("play", false);
         }, sleep * 600);
       }
     });
@@ -151,10 +151,10 @@ export class Dialog extends State {
       localStorage.setItem("settings", JSON.stringify(settings));
     });
 
-    function play(page, val) {
-      textToSpeech(page.paragraphs[page.current], val("settings"), () => {
+    function play(page, $) {
+      textToSpeech(page.paragraphs[page.current], $("settings"), () => {
         page.current++;
-        val("current", page.current);
+        $("current", page.current);
       });
     }
 
@@ -356,16 +356,18 @@ function prompt2(text, type = "text", value = "") {
 
 function prompt3(settings) {
   let voices = window.speechSynthesis.getVoices().map((e) => {
-    return { name: e.name, url: e.voiceURI };
+    return { name: e.name, url: e.voiceURI, lang: e.lang };
   });
   let s = select``;
 
   for (let i = 0; i < voices.length; i++) {
     const v = voices[i];
-    if (v.name == settings.voice) {
-      s.appendChild(option`innerText="${v.name}" value="${v.url}" selected`);
-    } else {
-      s.appendChild(option`innerText="${v.name}" value="${v.url}"`);
+    if (v.lang == "en-US") {
+      if (v.name == settings.voice) {
+        s.appendChild(option`innerText="${v.name}" value="${v.url}" selected`);
+      } else {
+        s.appendChild(option`innerText="${v.name}" value="${v.url}"`);
+      }
     }
   }
 
@@ -375,11 +377,11 @@ function prompt3(settings) {
                     ${div``}
                         ${s}
                         ${p`innerText="Pitch"`}
-                        ${input`type="range" min="0" max="5" value="${settings.pitch}"`}
+                        ${input`type="range" min="0" step="0.1" max="5" value="${settings.pitch}"`}
                         ${p`innerText="Rate"`}
-                        ${input`type="range" min="0" max="2" value="${settings.rate}"`}
+                        ${input`type="range" min="0" step="0.1" max="2" value="${settings.rate}"`}
                         ${p`innerText="Volume"`}
-                        ${input`type="range" min="0" max="5" value="${settings.volume}"`}
+                        ${input`type="range" min="0" step="0.1" max="5" value="${settings.volume}"`}
                     ${div`class="${css.prow}"`}
                         ${div`class="${css.pbtn2}" innerText="Back"`.on(
                           "click",

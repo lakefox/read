@@ -280,7 +280,7 @@ export class State {
         });
       }
     };
-    this.val = (name, value) => {
+    this.$ = (name, value) => {
       if (value === undefined && name === undefined) {
         return context;
       } else if (value === undefined && typeof name == "string") {
@@ -350,7 +350,7 @@ export class State {
             catchAll(event, ...args);
           }
         };
-        this.val = state.val;
+        this.$ = state.$;
         this.listen = state.listen;
         this.f = state.f;
         this.mount = state.mount;
@@ -398,12 +398,4 @@ export class State {
       }
     }
   }
-}
-
-function SQP(name, state) {
-  state.f((e) => {
-    for (const key in e) {
-      //
-    }
-  });
 }

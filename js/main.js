@@ -4,14 +4,14 @@ import { Dialog } from "./dialog.js";
 
 export class Main extends State {
   constructor(main) {
-    let { val, listen, f } = super();
+    let { $, listen, f } = super();
 
-    val("search", document.querySelector("#search"));
-    val("submit", document.querySelector("#submit"));
-    val("pages", []);
-    val("stories", document.querySelector("#stories"));
+    $("search", document.querySelector("#search"));
+    $("submit", document.querySelector("#submit"));
+    $("pages", []);
+    $("stories", document.querySelector("#stories"));
     (() => {
-      let { pages } = val();
+      let { pages } = $();
 
       for (const key in localStorage) {
         if (
@@ -22,7 +22,7 @@ export class Main extends State {
           pages.push(JSON.parse(element));
         }
       }
-      val("pages", pages);
+      $("pages", pages);
     })();
 
     listen("submit", "click", ({ search, pages }) => {
@@ -61,7 +61,7 @@ export class Main extends State {
           localStorage.setItem(page.id, JSON.stringify(page));
           pages.push(page);
           search.value = "";
-          val("pages", pages);
+          $("pages", pages);
         });
     });
 
