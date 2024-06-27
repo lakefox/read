@@ -7,6 +7,9 @@ import {
   input,
   button,
   progress,
+  select,
+  option,
+  p,
 } from "./html.js";
 import { textToSpeech } from "./tts.js";
 window.speechSynthesis.cancel();
@@ -21,6 +24,17 @@ export class Dialog extends State {
     val("play", true);
     val("current", page.current);
     val("sleep", 0);
+    val("settings", {
+      lang: "en-US",
+      voice: "Nicky",
+      pitch: 1.2,
+      rate: 1,
+      volume: 0.8,
+    });
+
+    if (localStorage.settings) {
+      val("settings", JSON.parse(localStorage.settings));
+    }
 
     let text = div`class="${css.text}" innerText="${
       page.paragraphs[page.current]
@@ -80,7 +94,14 @@ export class Dialog extends State {
                             ${back}
                             ${controls}
                             ${forward}
-                            ${div`class="${css.settings}" innerHTML="&#9881;"`}
+                            ${div`class="${css.settings}" innerHTML="&#9881;"`.on(
+                              "click",
+                              () => {
+                                prompt3(val("settings")).then((settings) => {
+                                  val("settings", settings);
+                                });
+                              }
+                            )}
                         ${p}
 
                     `;
@@ -126,21 +147,15 @@ export class Dialog extends State {
       }
     });
 
+    f(({ settings }) => {
+      localStorage.setItem("settings", JSON.stringify(settings));
+    });
+
     function play(page, val) {
-      textToSpeech(
-        page.paragraphs[page.current],
-        {
-          lang: "en-US",
-          voice: "Nicky",
-          pitch: 1.2,
-          rate: 1,
-          volume: 0.8,
-        },
-        () => {
-          page.current++;
-          val("current", page.current);
-        }
-      );
+      textToSpeech(page.paragraphs[page.current], val("settings"), () => {
+        page.current++;
+        val("current", page.current);
+      });
     }
 
     // listen("submit", "click", ({ search, pages }) => {});
@@ -235,6 +250,7 @@ let css = style(/* css */ `
     bottom: 77px;
     font-size: 37px;
     color: #000000ab;
+    cursor: pointer;
 }
 .sleep {
     position: absolute;
@@ -252,8 +268,9 @@ let css = style(/* css */ `
     background: #212121;
     padding: 20px;
     border-radius: 6px;
-    width: 85%;
-    height: 180px;
+    max-width: 85%;
+    width: 500px;
+    min-height: 180px;
     color: #fff;
     display: flex;
     flex-direction: column;
@@ -274,8 +291,7 @@ let css = style(/* css */ `
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
-    position: absolute;
-    bottom: 45px;
+    margin: 45px 0px;
 }
 .pbtn2{
     width: 140px;
@@ -323,6 +339,72 @@ function prompt2(text, type = "text", value = "") {
                                 "input"
                               ).value
                             );
+                          }
+                        )}
+                `;
+    document.body.appendChild(d);
+  });
+}
+
+// {
+// lang: "en-US",
+// voice: "Nicky",
+// pitch: 1.2,
+// rate: 1,
+// volume: 0.8,
+// }
+
+function prompt3(settings) {
+  let voices = window.speechSynthesis.getVoices().map((e) => {
+    return { name: e.name, url: e.voiceURI };
+  });
+  let s = select``;
+
+  for (let i = 0; i < voices.length; i++) {
+    const v = voices[i];
+    if (v.name == settings.voice) {
+      s.appendChild(option`innerText="${v.name}" value="${v.url}" selected`);
+    } else {
+      s.appendChild(option`innerText="${v.name}" value="${v.url}"`);
+    }
+  }
+
+  return new Promise((resolve, reject) => {
+    let d = Fmt`${div`class="${css.prompt}"`}
+                    ${div`class="${css.ptext}" innerText="Settings"`}
+                    ${div``}
+                        ${s}
+                        ${p`innerText="Pitch"`}
+                        ${input`type="range" min="0" max="5" value="${settings.pitch}"`}
+                        ${p`innerText="Rate"`}
+                        ${input`type="range" min="0" max="2" value="${settings.rate}"`}
+                        ${p`innerText="Volume"`}
+                        ${input`type="range" min="0" max="5" value="${settings.volume}"`}
+                    ${div`class="${css.prow}"`}
+                        ${div`class="${css.pbtn2}" innerText="Back"`.on(
+                          "click",
+                          () => {
+                            d.remove();
+
+                            reject();
+                          }
+                        )}
+                        ${div`class="${css.pbtn}" innerText="Submit"`.on(
+                          "click",
+                          (e) => {
+                            d.remove();
+                            let io =
+                              e.target.parentNode.parentNode.querySelectorAll(
+                                "input"
+                              );
+                            settings.pitch = parseFloat(io[0].value);
+                            settings.rate = parseFloat(io[1].value);
+                            settings.volume = parseFloat(io[2].value);
+                            settings.voice =
+                              e.target.parentNode.parentNode.querySelector(
+                                "select"
+                              ).value;
+                            resolve(settings);
                           }
                         )}
                 `;

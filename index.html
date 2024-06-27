@@ -6,8 +6,21 @@
     <title>Read</title>
     <link rel="stylesheet" href="./css/style.css" />
     <!-- <link rel="manifest" href="manifest.json" /> -->
-    <meta name="theme-color" content="#317EFB" />
-    <!-- <script type="module" src="./js/main.js"></script> -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="READ" />
+    <meta name="apple-mobile-web-app-title" content="READ" />
+    <meta name="theme-color" content="#000" />
+    <meta name="msapplication-navbutton-color" content="#000" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="msapplication-starturl" content="read.lakefox.net" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
     <script src="https://unpkg.com/@mozilla/readability@0.5.0/Readability.js"></script>
   </head>
   <body>
@@ -18,7 +31,6 @@
 
     <div id="stories"></div>
 
-    <!-- <script src="./js/app.js"></script> -->
     <script type="module">
       import { Main } from "./js/main.js";
       let main = new Main();

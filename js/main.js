@@ -14,7 +14,10 @@ export class Main extends State {
       let { pages } = val();
 
       for (const key in localStorage) {
-        if (Object.hasOwnProperty.call(localStorage, key)) {
+        if (
+          Object.hasOwnProperty.call(localStorage, key) &&
+          key != "settings"
+        ) {
           const element = localStorage[key];
           pages.push(JSON.parse(element));
         }
@@ -63,7 +66,6 @@ export class Main extends State {
     });
 
     f(({ pages, stories }) => {
-      console.log(pages);
       stories.innerHTML = "";
       for (let i = 0; i < pages.length; i++) {
         const page = pages[i];
