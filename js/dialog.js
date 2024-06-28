@@ -10,9 +10,9 @@ import {
   select,
   option,
   p,
+  audio,
 } from "./html.js";
-import { textToSpeech } from "./tts.js";
-window.speechSynthesis.cancel();
+import { streamAudio, cleanTextForCLI } from "./tts.js";
 
 export class Dialog extends State {
   constructor(page) {
@@ -38,47 +38,44 @@ export class Dialog extends State {
       $("settings", JSON.parse(localStorage.settings));
     }
 
-    let text = div`class="${css.text}" innerText="${
-      page.paragraphs[page.current]
-    }"`;
     let controls = button`class="${css.controls}"`.on("click", () => {
       $("play", !$("play"));
     });
     let back = button`class="${css.dir}" innerHTML="&#9664;&#9664;"`.on(
       "click",
       () => {
-        window.speechSynthesis.cancel();
-
         $("current", Math.max($("current") - 1, 0));
       }
     );
     let forward = button`class="${css.dir}" innerHTML="&#9654;&#9654;"`.on(
       "click",
       () => {
-        window.speechSynthesis.cancel();
-
         $("current", Math.min($("current") + 1, page.paragraphs.length - 1));
       }
     );
 
     let p = progress`value="${page.current + 5}" max="${
-      page.paragraphs.length - 1
+      page.text.length - 1
     }" class="${css.progress}"`;
 
+    let a = audio``;
+
     let d = Fmt`${div`class="${css.dialog}"`}
+                    ${a}
                     ${img`src="${page.image}" class="${css.bg}"`}
                     ${div`class="${css.row}"`}
                         ${div`innerText="${page.title}" class="${css.title}"`}
                         ${div`innerText="X" class="${css.exit}"`.on(
                           "click",
                           () => {
-                            window.speechSynthesis.cancel();
                             document.body.style["overflow"] = "inherit";
                             document.querySelector("." + css.dialog).remove();
                           }
                         )}
                     ${div`class="${css.cont}"`}
-                        ${text}
+                        ${div`class="${css.text}" innerText="${cleanTextForCLI(
+                          page.text
+                        )}"`}
                     ${div`class="${css.bottom}"`}
                         ${div``}
                             ${div`class="${css.sleep}" innerHTML="&#10088;"`.on(
@@ -103,26 +100,29 @@ export class Dialog extends State {
                               }
                             )}
                         ${p}
-
                     `;
     // timeout 5/15/30/1 hour
     document.body.appendChild(d);
 
-    play(page, $);
+    streamAudio(page.text, a, {
+      title: page.title,
+      artist: page.byline,
+      album: page.site,
+      artwork: [
+        {
+          src: page.image,
+          sizes: "512x512",
+          type: "image/jpeg",
+        },
+      ],
+    });
 
     f((e) => {
       if (e.play) {
         controls.innerHTML = "&#10074;&#10074;";
-        play(page, $);
-        if (e.sleep > 0) {
-          timeOut = setTimeout(() => {
-            window.speechSynthesis.cancel();
-            $("play", false);
-          }, e.sleep * 60000);
-        }
+        // play(page, $);
       } else {
         controls.innerHTML = "&#9654;";
-        window.speechSynthesis.cancel();
       }
     });
 
@@ -131,19 +131,10 @@ export class Dialog extends State {
       page.current = current;
       text.innerText = page.paragraphs[page.current];
       localStorage.setItem(page.id, JSON.stringify(page));
-      if ($("play")) {
-        console.log($("current"));
-        play(page, $);
-      }
     });
 
     f(({ sleep }) => {
       if (sleep) {
-        clearTimeout(timeOut);
-        timeOut = setTimeout(() => {
-          window.speechSynthesis.cancel();
-          $("play", false);
-        }, sleep * 60000);
       }
     });
 
@@ -151,21 +142,16 @@ export class Dialog extends State {
       localStorage.setItem("settings", JSON.stringify(settings));
     });
 
-    function play(page, $) {
-      textToSpeech(page.paragraphs[page.current], $("settings"), () => {
-        page.current++;
-        $("current", page.current);
-      });
-    }
-
     // listen("submit", "click", ({ search, pages }) => {});
   }
 }
 
 let css = style(/* css */ `
 .dialog {
-    width: 95vw;
-    height: 90vh;
+    width: 101vw;
+    height: 101vh;
+    max-width: 1400px;
+    max-height: 1000px;
     position: absolute;
     top: 50%;
     left: 50%;
@@ -414,4 +400,26 @@ function prompt3(settings) {
                 `;
     document.body.appendChild(d);
   });
+}
+
+async function getAudio(data) {
+  try {
+    const response = await fetch("http://143.244.148.224:80/stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ data: data }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Network response was not ok");
+    }
+
+    const audioBlob = await response.blob();
+    const audioUrl = URL.createObjectURL(audioBlob);
+    return audioUrl;
+  } catch (error) {
+    console.error("Error:", error);
+  }
 }

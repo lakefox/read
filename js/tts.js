@@ -1,3 +1,103 @@
+// {
+//               title: "Audio Title",
+//               artist: "Artist Name",
+//               album: "Album Name",
+//               artwork: [
+//                 {
+//                   src: "https://media.wired.com/photos/666c7786c0e3c3ad99f510cc/191:100/w_1280,c_limit/laurai%20-%208.JPG",
+//                   sizes: "512x512",
+//                   type: "image/jpeg",
+//                 },
+//               ],
+//             }
+
+export async function streamAudio(textInput, audioPlayer, trackInfo) {
+  try {
+    const response = await fetch("http://143.244.148.224:80/stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ data: cleanTextForCLI(textInput) }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Network response was not ok");
+    }
+
+    const mediaSource = new MediaSource();
+    audioPlayer.src = URL.createObjectURL(mediaSource);
+
+    mediaSource.addEventListener("sourceopen", async () => {
+      const sourceBuffer = mediaSource.addSourceBuffer(
+        'audio/webm; codecs="opus"'
+      );
+
+      const reader = response.body.getReader();
+
+      const pump = async () => {
+        const { done, value } = await reader.read();
+        if (done) {
+          mediaSource.endOfStream();
+          return;
+        }
+        sourceBuffer.appendBuffer(value);
+        await pump();
+      };
+      await pump();
+    });
+
+    // Set up Media Session API
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata(trackInfo);
+
+      // Set action handlers (optional)
+      navigator.mediaSession.setActionHandler("play", () => {
+        audioPlayer.play();
+      });
+      navigator.mediaSession.setActionHandler("pause", () => {
+        audioPlayer.pause();
+      });
+      navigator.mediaSession.setActionHandler("seekbackward", (details) => {
+        audioPlayer.currentTime = Math.max(
+          audioPlayer.currentTime - (details.seekOffset || 10),
+          0
+        );
+      });
+      navigator.mediaSession.setActionHandler("seekforward", (details) => {
+        audioPlayer.currentTime = Math.min(
+          audioPlayer.currentTime + (details.seekOffset || 10),
+          audioPlayer.duration
+        );
+      });
+      navigator.mediaSession.setActionHandler("previoustrack", () => {
+        // Handle previous track action
+      });
+      navigator.mediaSession.setActionHandler("nexttrack", () => {
+        // Handle next track action
+      });
+    }
+
+    audioPlayer.play();
+  } catch (error) {
+    console.error("Error:", error);
+  }
+}
+export function cleanTextForCLI(text) {
+  // Replace potentially harmful characters with safe ones
+  let sanitizedText = text.replace(/[`$&|;<>]/g, "");
+
+  // Escape single quotes, double quotes, and backslashes
+  sanitizedText = sanitizedText.replace(/['"\\]/g, "\\$&");
+
+  // Trim whitespace
+  sanitizedText = sanitizedText.trim();
+
+  sanitizedText = sanitizedText.replace(/[^a-zA-Z0-9\s\.]/g, "");
+
+  return sanitizedText;
+}
+
 export function textToSpeech(text, options = {}, callback = null) {
   // Create a new SpeechSynthesisUtterance instance
   let utterance = new SpeechSynthesisUtterance(text);

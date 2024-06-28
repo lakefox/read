@@ -55,7 +55,7 @@ export class Main extends State {
             image: (
               doc.querySelector("meta[property='og:image']") || { content: "" }
             ).content,
-            paragraphs,
+            text: paragraphs.join("\n"),
             current: 0,
           };
           localStorage.setItem(page.id, JSON.stringify(page));
@@ -80,8 +80,8 @@ export class Main extends State {
                             ${div`innerText="${page.date}" class="${css.date}"`}
                         ${div``}
                             ${div`innerText="Left: ${parseInt(
-                              (page.readingTime / page.paragraphs.length) *
-                                (page.paragraphs.length - page.current)
+                              (page.readingTime / page.text.split(" ").length) *
+                                (page.text.split(" ").length - page.current)
                             )} min(s)" class="${css.time}"`}
                         ${img`src="${page.image}" class="${css.image}"`}
                     `;
