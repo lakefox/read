@@ -118,7 +118,7 @@ export class Dialog extends State {
           timeOut = setTimeout(() => {
             window.speechSynthesis.cancel();
             $("play", false);
-          }, e.sleep * 600);
+          }, e.sleep * 60000);
         }
       } else {
         controls.innerHTML = "&#9654;";
@@ -143,7 +143,7 @@ export class Dialog extends State {
         timeOut = setTimeout(() => {
           window.speechSynthesis.cancel();
           $("play", false);
-        }, sleep * 600);
+        }, sleep * 60000);
       }
     });
 
