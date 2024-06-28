@@ -62,7 +62,7 @@ export class Dialog extends State {
     );
 
     let p = progress`value="${page.current + 5}" max="${
-      page.paragraphs.length
+      page.paragraphs.length - 1
     }" class="${css.progress}"`;
 
     let d = Fmt`${div`class="${css.dialog}"`}
