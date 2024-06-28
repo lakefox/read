@@ -164,13 +164,15 @@ export class Dialog extends State {
 
 let css = style(/* css */ `
 .dialog {
-    width: 100vw;
-    height: 100vh;
+    width: 95vw;
+    height: 90vh;
     position: absolute;
-    top: 0;
-    left: 0;
+    top: 50%;
+    left: 50%;
     background: #fff;
     overflow: hidden;
+    transform: translate(-50%, -50%);
+    border-radius: 25px;
 }
 .bg {
     width: 100vw;
