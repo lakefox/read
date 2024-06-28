@@ -48,7 +48,7 @@ export class Main extends State {
             title: readabilityDoc.title,
             byline: readabilityDoc.byline,
             excerpt: readabilityDoc.excerpt,
-            readingTime: readabilityDoc.length / 236,
+            readingTime: readabilityDoc.length / (236 * 5),
             date: readabilityDoc.publishedTime,
             site: readabilityDoc.siteName,
             catagory: getCategory(readabilityDoc.excerpt),
