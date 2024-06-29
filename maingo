@@ -41,7 +41,7 @@ func streamAudio(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Prepare the command using the text from the request
-	piperCmd := exec.Command("sh", "-c", "echo '"+requestData.Text+"' | ./piper/piper --model ../en_US-amy-medium.onnx --output-raw")
+	piperCmd := exec.Command("sh", "-c", "echo '"+requestData.Text+"' | /root/server/piper/piper --model /root/server/en_US-amy-medium.onnx --output-raw")
 	ffmpegCmd := exec.Command("ffmpeg", "-f", "s16le", "-ar", "22050", "-ac", "1", "-i", "pipe:0", "-c:a", "libopus", "-f", "webm", "pipe:1")
 
 	// Pipe the output of piper to ffmpeg
@@ -104,7 +104,5 @@ func main() {
 	http.HandleFunc("/stream", streamAudio)
 
 	log.Println("Server started on port 80")
-	if err := http.ListenAndServe(":80", nil); err != nil {
-		log.Fatalf("Error starting server: %v", err)
-	}
+	log.Fatal(http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/szn.io/fullchain.pem", "/etc/letsencrypt/live/szn.io/privkey.pem", nil))
 }

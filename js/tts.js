@@ -125,7 +125,7 @@ export function cleanTextForCLI(text) {
   let sanitizedText = text.replace(/[`$&|;<>]/g, "");
 
   // Escape single quotes, double quotes, and backslashes
-  sanitizedText = sanitizedText.replace(/[^a-zA-Z0-9\s\.]/g, "\\$&");
+  sanitizedText = sanitizedText.replace(/[^a-zA-Z0-9\s\.]/g, "");
 
   // Trim whitespace
   sanitizedText = sanitizedText.trim();
