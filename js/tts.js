@@ -11,106 +11,114 @@
 //               ],
 //             }
 
-export async function streamAudio(textInput, audioPlayer, trackInfo) {
-  try {
-    const response = await fetch("http://143.244.148.224:80/stream", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ data: cleanTextForCLI(textInput) }),
-    });
+export function streamAudio(textInput, audioPlayer, trackInfo) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const response = await fetch("http://143.244.148.224:80/stream", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ data: cleanTextForCLI(textInput) }),
+      });
 
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
-    }
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      let mediaSource;
+      if (window.MediaSource != undefined) {
+        mediaSource = new MediaSource();
+      } else {
+        mediaSource = new ManagedMediaSource();
+      }
 
-    const mediaSource = new MediaSource();
-    audioPlayer.src = URL.createObjectURL(mediaSource);
+      audioPlayer.src = URL.createObjectURL(mediaSource);
+      console.log(audioPlayer.src);
 
-    mediaSource.addEventListener("sourceopen", async () => {
-      const sourceBuffer = mediaSource.addSourceBuffer(
-        'audio/webm; codecs="opus"'
-      );
+      mediaSource.addEventListener("sourceopen", async () => {
+        const sourceBuffer = mediaSource.addSourceBuffer(
+          'audio/webm; codecs="opus"'
+        );
 
-      const reader = response.body.getReader();
-      let streamQueue = [];
-      let maxBufferSize = 6000; // Maximum buffer size in seconds
+        const reader = response.body.getReader();
+        let streamQueue = [];
+        let maxBufferSize = 6000; // Maximum buffer size in seconds
 
-      const processChunk = async ({ done, value }) => {
-        if (done) {
-          mediaSource.endOfStream();
-          return;
-        }
-        streamQueue.push(value);
-        if (!sourceBuffer.updating) {
-          appendBuffer();
-        }
-      };
-
-      const appendBuffer = () => {
-        if (sourceBuffer.updating || streamQueue.length === 0) {
-          return;
-        }
-
-        // Remove old buffered data if buffer is full
-        if (sourceBuffer.buffered.length > 0) {
-          const bufferedEnd = sourceBuffer.buffered.end(
-            sourceBuffer.buffered.length - 1
-          );
-          const bufferedStart = sourceBuffer.buffered.start(0);
-          if (bufferedEnd - bufferedStart > maxBufferSize) {
-            sourceBuffer.remove(bufferedStart, bufferedStart + 5);
+        const processChunk = async ({ done, value }) => {
+          if (done) {
+            mediaSource.endOfStream();
             return;
           }
+          streamQueue.push(value);
+          if (!sourceBuffer.updating) {
+            appendBuffer();
+          }
+        };
+
+        const appendBuffer = () => {
+          if (sourceBuffer.updating || streamQueue.length === 0) {
+            return;
+          }
+
+          // Remove old buffered data if buffer is full
+          if (sourceBuffer.buffered.length > 0) {
+            const bufferedEnd = sourceBuffer.buffered.end(
+              sourceBuffer.buffered.length - 1
+            );
+            const bufferedStart = sourceBuffer.buffered.start(0);
+            if (bufferedEnd - bufferedStart > maxBufferSize) {
+              sourceBuffer.remove(bufferedStart, bufferedStart + 5);
+              return;
+            }
+          }
+
+          sourceBuffer.appendBuffer(streamQueue.shift());
+        };
+
+        sourceBuffer.addEventListener("updateend", appendBuffer);
+
+        while (true) {
+          const chunk = await reader.read();
+          await processChunk(chunk);
         }
+      });
 
-        sourceBuffer.appendBuffer(streamQueue.shift());
-      };
+      // Set up Media Session API
+      if ("mediaSession" in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata(trackInfo);
 
-      sourceBuffer.addEventListener("updateend", appendBuffer);
-
-      while (true) {
-        const chunk = await reader.read();
-        await processChunk(chunk);
+        // Set action handlers (optional)
+        navigator.mediaSession.setActionHandler("play", () => {
+          audioPlayer.play();
+        });
+        navigator.mediaSession.setActionHandler("pause", () => {
+          audioPlayer.pause();
+        });
+        navigator.mediaSession.setActionHandler("seekbackward", (details) => {
+          audioPlayer.currentTime = Math.max(
+            audioPlayer.currentTime - (details.seekOffset || 10),
+            0
+          );
+        });
+        navigator.mediaSession.setActionHandler("seekforward", (details) => {
+          audioPlayer.currentTime = Math.min(
+            audioPlayer.currentTime + (details.seekOffset || 10),
+            audioPlayer.duration
+          );
+        });
+        navigator.mediaSession.setActionHandler("previoustrack", () => {
+          // Handle previous track action
+        });
+        navigator.mediaSession.setActionHandler("nexttrack", () => {
+          // Handle next track action
+        });
       }
-    });
 
-    // Set up Media Session API
-    if ("mediaSession" in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata(trackInfo);
-
-      // Set action handlers (optional)
-      navigator.mediaSession.setActionHandler("play", () => {
-        audioPlayer.play();
-      });
-      navigator.mediaSession.setActionHandler("pause", () => {
-        audioPlayer.pause();
-      });
-      navigator.mediaSession.setActionHandler("seekbackward", (details) => {
-        audioPlayer.currentTime = Math.max(
-          audioPlayer.currentTime - (details.seekOffset || 10),
-          0
-        );
-      });
-      navigator.mediaSession.setActionHandler("seekforward", (details) => {
-        audioPlayer.currentTime = Math.min(
-          audioPlayer.currentTime + (details.seekOffset || 10),
-          audioPlayer.duration
-        );
-      });
-      navigator.mediaSession.setActionHandler("previoustrack", () => {
-        // Handle previous track action
-      });
-      navigator.mediaSession.setActionHandler("nexttrack", () => {
-        // Handle next track action
-      });
+      resolve(audioPlayer);
+    } catch (error) {
+      console.error("Error:", error);
     }
-
-    audioPlayer.play();
-  } catch (error) {
-    console.error("Error:", error);
-  }
+  });
 }
 export function cleanTextForCLI(text) {
   // Replace potentially harmful characters with safe ones
@@ -122,7 +130,9 @@ export function cleanTextForCLI(text) {
   // Trim whitespace
   sanitizedText = sanitizedText.trim();
 
-  sanitizedText = sanitizedText.replace(/[^a-zA-Z0-9\s\.]/g, "");
+  sanitizedText = sanitizedText
+    .replace(/[^a-zA-Z0-9\s\.]/g, " ")
+    .replace(/\s+/g, " ");
 
   return sanitizedText;
 }

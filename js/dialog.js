@@ -20,10 +20,8 @@ export class Dialog extends State {
     document.body.style["overflow"] = "hidden";
     window.scrollTo(0, 0);
 
-    let timeOut;
-
     $("body", document.body);
-    $("play", true);
+    $("play", false);
     $("current", page.current);
     $("sleep", 0);
     $("settings", {
@@ -41,18 +39,18 @@ export class Dialog extends State {
     let controls = button`class="${css.controls}"`.on("click", () => {
       $("play", !$("play"));
     });
-    let back = button`class="${css.dir}" innerHTML="&#9664;&#9664;"`.on(
-      "click",
-      () => {
-        $("current", Math.max($("current") - 1, 0));
-      }
-    );
-    let forward = button`class="${css.dir}" innerHTML="&#9654;&#9654;"`.on(
-      "click",
-      () => {
-        $("current", Math.min($("current") + 1, page.paragraphs.length - 1));
-      }
-    );
+    // let back = button`class="${css.dir}" innerHTML="&#9664;&#9664;"`.on(
+    //   "click",
+    //   () => {
+    //     $("current", Math.max($("current") - 1, 0));
+    //   }
+    // );
+    // let forward = button`class="${css.dir}" innerHTML="&#9654;&#9654;"`.on(
+    //   "click",
+    //   () => {
+    //     $("current", Math.min($("current") + 1, page.paragraphs.length - 1));
+    //   }
+    // );
 
     let p = progress`value="${page.current + 5}" max="${
       page.text.length - 1
@@ -88,22 +86,21 @@ export class Dialog extends State {
                                 );
                               }
                             )}
-                            ${back}
                             ${controls}
-                            ${forward}
-                            ${div`class="${css.settings}" innerHTML="&#9881;"`.on(
-                              "click",
-                              () => {
-                                prompt3($("settings")).then((settings) => {
-                                  $("settings", settings);
-                                });
-                              }
-                            )}
                         ${p}
                     `;
+    // ${div`class="${css.settings}" innerHTML="&#9881;"`.on(
+    //             "click",
+    //             () => {
+    //             prompt3($("settings")).then((settings) => {
+    //                 $("settings", settings);
+    //             });
+    //             }
+    //         )}
     // timeout 5/15/30/1 hour
     document.body.appendChild(d);
 
+    let player = { play: () => {}, pause: () => {} };
     streamAudio(page.text, a, {
       title: page.title,
       artist: page.byline,
@@ -115,26 +112,19 @@ export class Dialog extends State {
           type: "image/jpeg",
         },
       ],
+    }).then((play) => {
+      player = play;
+      player.play();
+      $("play", true);
     });
 
     f((e) => {
       if (e.play) {
         controls.innerHTML = "&#10074;&#10074;";
-        // play(page, $);
+        player.play();
       } else {
         controls.innerHTML = "&#9654;";
-      }
-    });
-
-    f(({ current }) => {
-      p.value = current;
-      page.current = current;
-      text.innerText = page.paragraphs[page.current];
-      localStorage.setItem(page.id, JSON.stringify(page));
-    });
-
-    f(({ sleep }) => {
-      if (sleep) {
+        player.pause();
       }
     });
 
@@ -148,17 +138,15 @@ export class Dialog extends State {
 
 let css = style(/* css */ `
 .dialog {
-    width: 101vw;
-    height: 101vh;
-    max-width: 1400px;
-    max-height: 1000px;
+    width: 100%;
+    height: 100%;
     position: absolute;
     top: 50%;
     left: 50%;
     background: #fff;
     overflow: hidden;
     transform: translate(-50%, -50%);
-    border-radius: 25px;
+    border-radius: 5px;
 }
 .bg {
     width: 100vw;
