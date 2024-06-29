@@ -34,17 +34,46 @@ export async function streamAudio(textInput, audioPlayer, trackInfo) {
       );
 
       const reader = response.body.getReader();
+      let streamQueue = [];
+      let maxBufferSize = 6000; // Maximum buffer size in seconds
 
-      const pump = async () => {
-        const { done, value } = await reader.read();
+      const processChunk = async ({ done, value }) => {
         if (done) {
           mediaSource.endOfStream();
           return;
         }
-        sourceBuffer.appendBuffer(value);
-        await pump();
+        streamQueue.push(value);
+        if (!sourceBuffer.updating) {
+          appendBuffer();
+        }
       };
-      await pump();
+
+      const appendBuffer = () => {
+        if (sourceBuffer.updating || streamQueue.length === 0) {
+          return;
+        }
+
+        // Remove old buffered data if buffer is full
+        if (sourceBuffer.buffered.length > 0) {
+          const bufferedEnd = sourceBuffer.buffered.end(
+            sourceBuffer.buffered.length - 1
+          );
+          const bufferedStart = sourceBuffer.buffered.start(0);
+          if (bufferedEnd - bufferedStart > maxBufferSize) {
+            sourceBuffer.remove(bufferedStart, bufferedStart + 5);
+            return;
+          }
+        }
+
+        sourceBuffer.appendBuffer(streamQueue.shift());
+      };
+
+      sourceBuffer.addEventListener("updateend", appendBuffer);
+
+      while (true) {
+        const chunk = await reader.read();
+        await processChunk(chunk);
+      }
     });
 
     // Set up Media Session API
