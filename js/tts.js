@@ -14,7 +14,7 @@
 export function streamAudio(textInput, audioPlayer, trackInfo) {
   return new Promise(async (resolve, reject) => {
     try {
-      const response = await fetch("http://143.244.148.224:80/stream", {
+      const response = await fetch("https://szn.io/stream", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
