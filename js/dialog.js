@@ -192,7 +192,7 @@ let css = style(/* css */ `
     font-weight: 900;
 }
 .text {
-    text-align: center;
+    text-align: left;
     max-height: 500px;
     overflow-y: auto;
 }
