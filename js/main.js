@@ -105,9 +105,9 @@ export class Main extends State {
       for (let i = 0; i < suggested.length; i++) {
         const suggest = suggested[i];
         let el = Fmt`${div`class="${css.story}" style="margin-bottom: 0"`}
-                        ${div`innerText="${
-                          suggest.site
-                        }/${suggest.catagory.toUpperCase()}" class="${
+                        ${div`innerText="${suggest.site
+                          .split(".")[0]
+                          .toUpperCase()} / ${suggest.catagory.toUpperCase()}" class="${
                           css.site
                         }"`}
                         ${a`innerText="${suggest.title}" class="${css.title}"`}
