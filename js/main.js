@@ -1,6 +1,6 @@
-import { div, style, State, Fmt, img, a } from "./html.js";
+import { div, style, State, Fmt, img, a, h2, span } from "./html.js";
 import { getCategory } from "./categories.js";
-import { Dialog } from "./dialog.js";
+import { Player } from "./player.js";
 
 export class Main extends State {
   constructor(main) {
@@ -10,6 +10,9 @@ export class Main extends State {
     $("submit", document.querySelector("#submit"));
     $("pages", []);
     $("stories", document.querySelector("#stories"));
+    $("suggestedCont", document.querySelector("#suggestedCont"));
+    $("cats", document.querySelector("#cats"));
+    $("suggested", []);
     (() => {
       let { pages } = $();
 
@@ -23,10 +26,12 @@ export class Main extends State {
         }
       }
       $("pages", pages);
+      getSuggested().then((posts) => {
+        $("suggested", posts);
+      });
     })();
 
     listen("submit", "click", ({ search, pages }) => {
-      console.log(search.value);
       fetch(`https://cors.lowsh.workers.dev/?${search.value}`)
         .then((e) => e.text())
         .then((res) => {
@@ -56,7 +61,6 @@ export class Main extends State {
               doc.querySelector("meta[property='og:image']") || { content: "" }
             ).content,
             text: paragraphs.join("\n"),
-            current: 0,
           };
           localStorage.setItem(page.id, JSON.stringify(page));
           pages.push(page);
@@ -69,7 +73,6 @@ export class Main extends State {
       stories.innerHTML = "";
       for (let i = 0; i < pages.length; i++) {
         const page = pages[i];
-        console.log();
         let el = Fmt`${div`class="${css.story}"`}
                         ${div`innerText="${
                           page.site
@@ -77,7 +80,11 @@ export class Main extends State {
                         ${a`innerText="${page.title}" class="${css.title}"`}
                         ${div`class="${css.info}"`}
                             ${div`innerText="${page.byline}" class="${css.byline}"`}
-                            ${div`innerText="${page.date}" class="${css.date}"`}
+                            ${div`innerText="${new Date(page.date)
+                              .toString()
+                              .split(" ")
+                              .slice(0, 4)
+                              .join(" ")}" class="${css.date}"`}
                         ${div``}
                             ${div`innerText="Left: ${parseInt(
                               (page.readingTime / page.text.split(" ").length) *
@@ -86,11 +93,35 @@ export class Main extends State {
                         ${img`src="${page.image}" class="${css.image}"`}
                     `;
         el.addEventListener("click", () => {
-          console.log(page);
-          new Dialog(page);
+          new Player(page);
         });
-        console.log(el);
         stories.appendChild(el);
+      }
+    });
+
+    f(({ suggested, suggestedCont, cats }) => {
+      suggestedCont.innerHTML = "";
+      let used = [];
+      for (let i = 0; i < suggested.length; i++) {
+        const suggest = suggested[i];
+        let el = Fmt`${div`class="${css.story}" style="margin-bottom: 0"`}
+                        ${div`innerText="${
+                          suggest.site
+                        }/${suggest.catagory.toUpperCase()}" class="${
+                          css.site
+                        }"`}
+                        ${a`innerText="${suggest.title}" class="${css.title}"`}
+  
+                    `;
+        el.addEventListener("click", () => {
+          new Preview(page);
+        });
+        suggestedCont.appendChild(el);
+        if (used.indexOf(suggest.catagory) == -1) {
+          let c = span`innerText="${suggest.catagory}" class="${css.cats}"`;
+          cats.appendChild(c);
+          used.push(suggest.catagory);
+        }
       }
     });
   }
@@ -133,5 +164,36 @@ let css = style(/* css */ `
     width: 100%;
     border-radius: 10px;
 }
-
+.cats {
+    padding: 3px;
+    border: 2px solid #6ea2ff;
+    border-radius: 5px;
+    margin: 0px 5px;
+    cursor: pointer;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #2c2c2c;
+    font-size: 13px;
+}
 `);
+
+function getSuggested() {
+  return new Promise((resolve, reject) => {
+    fetch(
+      `https://cors.lowsh.workers.dev/?https://www.reddit.com/r/Longreads/top.json?t=month`
+    )
+      .then((e) => e.json())
+      .then((d) => {
+        let posts = d.data.children.map((e) => {
+          let p = e.data;
+          return {
+            title: p.title,
+            url: p.url,
+            site: p.domain,
+            catagory: getCategory(p.title),
+          };
+        });
+        resolve(posts);
+      });
+  });
+}
