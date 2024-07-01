@@ -114,7 +114,6 @@ let css = style(/* css */ `
     margin: auto;
     margin-bottom: 50px;
     border-radius: 10px;
-    padding: 40px;
     max-width: 85%;
 }
 
