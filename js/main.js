@@ -1,6 +1,7 @@
 import { div, style, State, Fmt, img, a, h2, span } from "./html.js";
 import { getCategory } from "./categories.js";
 import { Player } from "./player.js";
+import { Preview } from "./preview.js";
 
 export class Main extends State {
   constructor(main) {
@@ -13,6 +14,7 @@ export class Main extends State {
     $("suggestedCont", document.querySelector("#suggestedCont"));
     $("cats", document.querySelector("#cats"));
     $("suggested", []);
+    $("filter", []);
     (() => {
       let { pages } = $();
 
@@ -41,6 +43,8 @@ export class Main extends State {
 
           // Use Readability on the new document
           let readabilityDoc = new Readability(doc).parse();
+
+          console.log(readabilityDoc);
 
           let cont = div``;
           cont.innerHTML = readabilityDoc.content;
@@ -72,11 +76,11 @@ export class Main extends State {
     f(({ pages, stories }) => {
       stories.innerHTML = "";
       for (let i = 0; i < pages.length; i++) {
-        const page = pages[i];
+        let page = pages[pages.length - 1 - i];
         let el = Fmt`${div`class="${css.story}"`}
-                        ${div`innerText="${
-                          page.site
-                        }/${page.catagory.toUpperCase()}" class="${css.site}"`}
+                        ${div`innerText="${page.site.toUpperCase()} / ${page.catagory.toUpperCase()}" class="${
+                          css.site
+                        }"`}
                         ${a`innerText="${page.title}" class="${css.title}"`}
                         ${div`class="${css.info}"`}
                             ${div`innerText="${page.byline}" class="${css.byline}"`}
@@ -88,7 +92,7 @@ export class Main extends State {
                         ${div``}
                             ${div`innerText="Left: ${parseInt(
                               (page.readingTime / page.text.split(" ").length) *
-                                (page.text.split(" ").length - page.current)
+                                page.text.split(" ").length
                             )} min(s)" class="${css.time}"`}
                         ${img`src="${page.image}" class="${css.image}"`}
                     `;
@@ -99,29 +103,51 @@ export class Main extends State {
       }
     });
 
-    f(({ suggested, suggestedCont, cats }) => {
+    f(({ suggested, suggestedCont, cats, filter }) => {
       suggestedCont.innerHTML = "";
+      cats.innerHTML = "";
       let used = [];
       for (let i = 0; i < suggested.length; i++) {
-        const suggest = suggested[i];
-        let el = Fmt`${div`class="${css.story}" style="margin-bottom: 0"`}
+        let suggest = suggested[i];
+        if (filter.length == 0 || filter.indexOf(suggest.catagory) != -1) {
+          let el = Fmt`${div`class="${css.story}" style="margin-bottom: 0"`}
                         ${div`innerText="${suggest.site
                           .split(".")[0]
-                          .toUpperCase()} / ${suggest.catagory.toUpperCase()}" class="${
-                          css.site
-                        }"`}
+                          .toUpperCase()} / ${(
+                          suggest.catagory || ""
+                        ).toUpperCase()}" class="${css.site}"`}
                         ${a`innerText="${suggest.title}" class="${css.title}"`}
   
                     `;
-        el.addEventListener("click", () => {
-          new Preview(page);
-        });
-        suggestedCont.appendChild(el);
-        if (used.indexOf(suggest.catagory) == -1) {
-          let c = span`innerText="${suggest.catagory}" class="${css.cats}"`;
-          cats.appendChild(c);
-          used.push(suggest.catagory);
+          el.addEventListener("click", () => {
+            new Preview(suggest);
+          });
+          suggestedCont.appendChild(el);
+          if (
+            used.indexOf(suggest.catagory) == -1 &&
+            suggest.catagory != null
+          ) {
+            let c =
+              span`innerText="${suggest.catagory}" class="${css.cats}"`.on(
+                "click",
+                () => {
+                  let { filter } = $();
+                  filter.push(suggest.catagory);
+                  $("filter", filter);
+                }
+              );
+            cats.appendChild(c);
+            used.push(suggest.catagory);
+          }
         }
+      }
+      if (filter.length > 0) {
+        let c = span`innerText="X" class="${css.clearcats}"`.on("click", () => {
+          let { filter } = $();
+          filter = [];
+          $("filter", filter);
+        });
+        cats.appendChild(c);
       }
     });
   }
@@ -173,7 +199,20 @@ let css = style(/* css */ `
     text-transform: uppercase;
     font-weight: 700;
     color: #2c2c2c;
-    font-size: 13px;
+    font-size: 13px; 
+}
+.clearcats {
+    padding: 3px;
+    padding-left: 5px;
+    padding-right: 5px;
+    border: 2px solid #989898;
+    border-radius: 5px;
+    margin: 0px 5px;
+    cursor: pointer;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #989898;
+    font-size: 13px; 
 }
 `);
 
