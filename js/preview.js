@@ -22,6 +22,14 @@ export class Preview extends State {
         let cont = div``;
         cont.innerHTML = readabilityDoc.content;
 
+        let imgs = cont.querySelectorAll("img");
+
+        for (let i = 0; i < imgs.length; i++) {
+          const element = imgs[i];
+          element.setAttribute("width", "");
+          element.setAttribute("height", "");
+        }
+
         let paragraphs = [...cont.querySelectorAll("p")].map((p) => {
           return p.innerText;
         });
@@ -115,6 +123,8 @@ let css = style(/* css */ `
     margin-bottom: 50px;
     border-radius: 10px;
     max-width: 85%;
+    padding-top: 40px;
+    padding-bottom: 40px;
 }
 
 .site{
