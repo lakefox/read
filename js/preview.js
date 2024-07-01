@@ -159,12 +159,12 @@ let css = style(/* css */ `
     border-radius: 10px;
     color: #fff;
     background: #88a8ff;
-    margin-top: 30px;
-    margin-bottom: 30px;
     text-align: center;
     line-height: 50px;
     font-weight: 900;
     cursor: pointer;
+    position: sticky;
+    bottom: 6px;
 }
 .close {
     color: #f88;
