@@ -10,7 +10,8 @@ import (
 
 // RequestData represents the expected JSON structure for the POST request.
 type RequestData struct {
-	Text string `json:"data"`
+	Text  string `json:"data"`
+	Voice string `json:"voice"`
 }
 
 func streamAudio(w http.ResponseWriter, r *http.Request) {
@@ -40,8 +41,15 @@ func streamAudio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var voice string
+	if requestData.Voice == "female" {
+		voice = "en_US-amy-medium.onnx"
+	} else {
+		voice = "en_US-joe-medium.onnx"
+	}
+	log.Printf("Using voice model: %s\n", voice)
 	// Prepare the command using the text from the request
-	piperCmd := exec.Command("sh", "-c", "echo '"+requestData.Text+"' | /root/server/piper/piper --model /root/server/en_US-amy-medium.onnx --output-raw")
+	piperCmd := exec.Command("sh", "-c", "echo '"+requestData.Text+"' | /root/server/piper/piper --model /root/"+voice+" --output-raw")
 	ffmpegCmd := exec.Command("ffmpeg", "-f", "s16le", "-ar", "22050", "-ac", "1", "-i", "pipe:0", "-c:a", "libopus", "-f", "webm", "pipe:1")
 
 	// Pipe the output of piper to ffmpeg
@@ -103,6 +111,6 @@ func streamAudio(w http.ResponseWriter, r *http.Request) {
 func main() {
 	http.HandleFunc("/stream", streamAudio)
 
-	log.Println("Server started on port 80")
-	log.Fatal(http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/szn.io/fullchain.pem", "/etc/letsencrypt/live/szn.io/privkey.pem", nil))
+	log.Println("Server started on port 443")
+	log.Fatal(http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/tts.szn.io/fullchain.pem", "/etc/letsencrypt/live/tts.szn.io/privkey.pem", nil))
 }

@@ -8,7 +8,7 @@ export class Player extends State {
     let a = document.querySelector("#audio");
     document.querySelector("#background").src = page.image;
 
-    streamAudio(page.text, a, {
+    streamAudio({ text: page.text, voice: page.voice }, a, {
       title: page.title,
       artist: page.byline,
       album: page.site,

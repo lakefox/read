@@ -11,7 +11,7 @@
 //               ],
 //             }
 
-export function streamAudio(textInput, audioPlayer, trackInfo) {
+export function streamAudio(streamInfo, audioPlayer, trackInfo) {
   return new Promise(async (resolve, reject) => {
     try {
       const response = await fetch("https://tts.szn.io/stream", {
@@ -19,7 +19,10 @@ export function streamAudio(textInput, audioPlayer, trackInfo) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ data: cleanTextForCLI(textInput) }),
+        body: JSON.stringify({
+          data: cleanTextForCLI(streamInfo.text),
+          voice: streamInfo.voice,
+        }),
       });
 
       if (!response.ok) {
