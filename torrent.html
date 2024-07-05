@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebTorrent RSS Streamer</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #141414;
+        color: #ffffff;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 20px;
+        margin-top: 100px;
+      }
+      .item {
+        position: relative;
+        overflow: hidden;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+      }
+      .item:hover {
+        transform: scale(1.05);
+      }
+      .item img {
+        width: 100%;
+        height: auto;
+      }
+      .item-title {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: rgba(0, 0, 0, 0.7);
+        padding: 10px;
+        font-size: 14px;
+      }
+      #videoModal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.9);
+      }
+      #videoPlayer {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        max-width: 90%;
+        max-height: 90%;
+      }
+      .close {
+        color: #fff;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        padding: 10px;
+      }
+      #magnetInput {
+        width: 70%;
+        padding: 10px;
+        margin-right: 10px;
+      }
+      #addMagnetBtn {
+        padding: 10px 20px;
+        background-color: #e50914;
+        color: white;
+        border: none;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>WebTorrent RSS Streamer</h1>
+      <div>
+        <input
+          type="text"
+          id="magnetInput"
+          placeholder="Paste magnet link here"
+        />
+        <button id="addMagnetBtn">Add Torrent</button>
+      </div>
+      <div id="grid" class="grid"></div>
+    </div>
+
+    <div id="videoModal">
+      <span class="close">&times;</span>
+      <video id="videoPlayer" controls></video>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/rss-parser@latest/dist/rss-parser.min.js"></script>
+    <script>
+      const client = new WebTorrent();
+      const parser = new RSSParser();
+      const CORS_PROXY = "https://cors.lowsh.workers.dev/?";
+      const RSS_URL = "YOUR_RSS_FEED_URL";
+
+      const videoModal = document.getElementById("videoModal");
+      const videoPlayer = document.getElementById("videoPlayer");
+      const closeBtn = document.getElementsByClassName("close")[0];
+      const magnetInput = document.getElementById("magnetInput");
+      const addMagnetBtn = document.getElementById("addMagnetBtn");
+
+      async function fetchRSS() {
+        try {
+          const feed = await parser.parseURL(CORS_PROXY + RSS_URL);
+          return feed.items.filter(
+            (item) => item.enclosure && item.enclosure.url
+          );
+        } catch (error) {
+          console.error("Error fetching RSS:", error);
+          return [];
+        }
+      }
+
+      function addTorrent(magnetLink) {
+        return new Promise((resolve, reject) => {
+          console.log("Adding torrent:", magnetLink);
+          client.add(magnetLink, (torrent) => {
+            console.log("Torrent added:", torrent);
+
+            // Log peers information
+            torrent.on("wire", (wire, addr) => {
+              console.log("Connected to peer with address:", addr);
+            });
+
+            // Log download progress
+            torrent.on("download", (bytes) => {
+              console.log(`Downloaded: ${bytes} bytes`);
+              console.log(`Progress: ${(torrent.progress * 100).toFixed(2)}%`);
+            });
+
+            // Log completion
+            torrent.on("done", () => {
+              console.log("Torrent download finished");
+            });
+
+            // Handle torrent files
+            const imageFile = torrent.files.find((file) =>
+              file.name.match(/\.(jpg|jpeg|png|gif)$/i)
+            );
+            const videoFile = torrent.files.find((file) =>
+              file.name.match(/\.(mp4|mkv|avi|mov)$/i)
+            );
+
+            console.log("Torrent files:", torrent.files);
+
+            if (videoFile) {
+              if (imageFile) {
+                imageFile.getBlobURL((err, imageUrl) => {
+                  if (err) reject(err);
+                  else resolve({ imageUrl, videoFile, title: torrent.name });
+                });
+              } else {
+                resolve({
+                  imageUrl: "placeholder.jpg",
+                  videoFile,
+                  title: torrent.name,
+                });
+              }
+            } else {
+              reject(new Error("No video file found in the torrent"));
+            }
+          });
+        });
+      }
+
+      async function displayItem(item) {
+        try {
+          const { imageUrl, videoFile, title } = await addTorrent(
+            item.enclosure ? item.enclosure.url : item
+          );
+          const div = document.createElement("div");
+          div.className = "item";
+          div.innerHTML = `
+                  <img src="${imageUrl}" alt="${title}">
+                  <div class="item-title">${title}</div>
+              `;
+          div.addEventListener("click", () => playVideo(videoFile));
+          document.getElementById("grid").appendChild(div);
+        } catch (error) {
+          console.error("Error processing item:", error);
+          alert("Failed to load torrent: " + error.message);
+        }
+      }
+
+      async function displayItems(items) {
+        for (const item of items) {
+          await displayItem(item);
+        }
+      }
+
+      function playVideo(file) {
+        file.getBlobURL((err, url) => {
+          if (err) {
+            console.error("Error getting video URL:", err);
+            alert("Error playing video");
+            return;
+          }
+          videoPlayer.src = url;
+          videoModal.style.display = "block";
+        });
+      }
+
+      closeBtn.onclick = function () {
+        videoModal.style.display = "none";
+        videoPlayer.pause();
+        videoPlayer.src = "";
+      };
+
+      window.onclick = function (event) {
+        if (event.target == videoModal) {
+          videoModal.style.display = "none";
+          videoPlayer.pause();
+          videoPlayer.src = "";
+        }
+      };
+
+      addMagnetBtn.onclick = function () {
+        const magnetLink = magnetInput.value.trim();
+        if (magnetLink) {
+          displayItem(magnetLink);
+          magnetInput.value = "";
+        } else {
+          alert("Please enter a valid magnet link");
+        }
+      };
+
+      async function init() {
+        const items = await fetchRSS();
+        await displayItems(items);
+      }
+
+      // init();
+    </script>
+  </body>
+</html>
