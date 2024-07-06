@@ -1,30 +1,30 @@
 const months = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
 ];
 
 let monthCombos = months.concat([
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
+  "jan",
+  "feb",
+  "mar",
+  "apr",
+  "jun",
+  "jul",
+  "aug",
+  "sep",
+  "oct",
+  "nov",
+  "dec",
 ]);
 
 const ordinals = [
@@ -165,6 +165,29 @@ const numberWords = [
   "ninety-nine",
 ];
 
+const yearNumeberWords = [
+  "one hundred",
+  "two hundred",
+  "three hundred",
+  "four hundred",
+  "five hundred",
+  "six hundred",
+  "seven hundred",
+  "eight hundred",
+  "nine hundred",
+  "one thousand",
+  "eleven",
+  "twelve",
+  "thirteen",
+  "fourteen",
+  "fifteen",
+  "sixteen",
+  "seventeen",
+  "eighteen",
+  "nineteen",
+  "two thousand",
+];
+
 function numberToWords(number) {
   if (number <= 99) {
     return numberWords[number];
@@ -188,11 +211,8 @@ function yearToWords(year) {
   if (yearStr.length === 4) {
     const firstPart = parseInt(yearStr.slice(0, 2));
     const secondPart = parseInt(yearStr.slice(2, 4));
-    if (secondPart < 10) {
-      return `${numberWords[firstPart * 10]} ${numberWords[secondPart]}`;
-    } else {
-      return `${numberWords[firstPart]} ${numberWords[secondPart]}`;
-    }
+
+    return `${yearNumeberWords[firstPart - 1]} ${numberWords[secondPart]}`;
   }
   return yearStr
     .split("")
@@ -200,10 +220,12 @@ function yearToWords(year) {
     .join(" ");
 }
 
-function replaceDates(text) {
+export function replaceDates(text) {
   let textSplit = text.split(" ");
 
   let numbers = [];
+
+  let replaceable = [];
 
   for (let i = 0; i < textSplit.length; i++) {
     if (!isNaN(parseInt(textSplit[i]))) {
@@ -217,9 +239,14 @@ function replaceDates(text) {
   for (let i = 0; i < numbers.length; i++) {
     const target = numbers[i];
     let neighbors = textSplit.slice(
-      Math.max(target.index - 3, 0),
-      Math.min(target.index + 3, textSplit.length)
+      Math.max(target.index - 2, 0),
+      Math.min(target.index + 2, textSplit.length)
     );
+    if (i > 0) {
+      if (target.index - numbers[i - 1].index <= 1) {
+        continue;
+      }
+    }
 
     let combos = generateCombinations(neighbors);
 
@@ -227,23 +254,27 @@ function replaceDates(text) {
       return b.length - a.length;
     });
 
+    console.log(combos);
+
     let foundDate = undefined;
     let filter = new Date().toString();
     let bestLine = filter;
     for (let a = 0; a < combos.length; a++) {
       const line = combos[a].join(" ");
 
-      let date = new Date(line);
+      let date = new Date(keepOnlyMonths(line));
+
       if (date != "Invalid Date") {
         if (foundDate != undefined) {
-          if (foundDate.toString() == date.toString()) {
-            if (line.length < bestLine.length) {
-              if (line.replace(/[^0-9]/g, "").length >= 4) {
-                bestLine = line;
-              }
+          if (line.indexOf(target.text) != -1) {
+            if (
+              keepOnlyMonths(line).trim().split(" ").length >=
+              keepOnlyMonths(bestLine).trim().split(" ").length
+            ) {
+              bestLine = line;
             }
           }
-        } else {
+        } else if (line.indexOf(target.text) != -1) {
           foundDate = date;
           bestLine = line;
         }
@@ -251,13 +282,11 @@ function replaceDates(text) {
     }
 
     if (bestLine != filter) {
-      console.log(bestLine);
       let parts = bestLine
         .replace(/[^0-9A-Z-a-z]/g, " ")
         .replace(/\s+/g, " ")
         .trim()
         .split(" ");
-      console.log(parts, foundDate);
       let str = "";
       let yearString = foundDate.getFullYear().toString();
       let year = yearToWords(parseInt(yearString));
@@ -265,10 +294,8 @@ function replaceDates(text) {
       let day = dayToOrdinal(foundDate.getDate());
 
       if (parts.length == 3) {
-        console.log("3");
         str = `${month} ${day} ${year}`;
       } else if (parts.length == 2) {
-        console.log("2");
         if (monthCombos.indexOf(parts[0].toLowerCase()) != -1) {
           str = month;
         }
@@ -280,13 +307,16 @@ function replaceDates(text) {
       } else if (parts.length == 1 && parts[0].length == 4) {
         str = year;
       }
-      console.log(str);
-      // Replace the original date string with the spoken string
-      text = text.replace(bestLine, str);
+
+      replaceable.push({
+        text: str,
+        index: target.index,
+        line: bestLine.split(" "),
+      });
     }
   }
 
-  return text;
+  return replaceLinesWithText(replaceable, textSplit).join(" ");
 }
 
 function generateCombinations(array) {
@@ -306,7 +336,93 @@ function generateCombinations(array) {
   return result.slice(1);
 }
 
+function replaceLinesWithText(objects, textArray) {
+  // Helper function to find the exact start index of the line within the range
+  function findLineIndex(line, range) {
+    for (let i = range[0]; i <= range[1]; i++) {
+      if (
+        textArray
+          .slice(i, i + line.length)
+          .join(" ")
+          .toLowerCase()
+          .trim() === line.join(" ").toLowerCase().trim()
+      ) {
+        return i;
+      }
+    }
+    return -1; // If not found
+  }
+
+  objects.forEach((obj) => {
+    const range = [
+      Math.max(0, obj.index - 5),
+      Math.min(textArray.length, obj.index + 5),
+    ];
+    const startIndex = findLineIndex(obj.line, range);
+
+    if (startIndex !== -1) {
+      textArray.splice(startIndex, obj.line.length, obj.text);
+    }
+  });
+
+  return textArray;
+}
+
+function keepOnlyMonths(input) {
+  const months = [
+    "january",
+    "jan",
+    "february",
+    "feb",
+    "march",
+    "mar",
+    "april",
+    "apr",
+    "may",
+    "june",
+    "jun",
+    "july",
+    "jul",
+    "august",
+    "aug",
+    "september",
+    "sep",
+    "october",
+    "oct",
+    "november",
+    "nov",
+    "december",
+    "dec",
+  ];
+  input = input.toLowerCase();
+  // Create a regular expression to match all months
+
+  // Initialize an empty string for the result
+  let result = "";
+
+  // Split the input by non-alphabetical characters
+  const parts = input.split(/([^a-zA-Z]+)/);
+
+  // Iterate through the parts and keep only the months and special characters
+  for (let part of parts) {
+    if (months.includes(part)) {
+      result += part;
+    } else if (/[^a-zA-Z]/.test(part)) {
+      result += part;
+    }
+  }
+
+  return result;
+}
+
 // Example usage
-const text = "These are some dates: , July 4th, 2024, and Nov 6, 2023.";
-console.log(replaceDates(text));
+// const text =
+//   "Jackson committed what some would call a betrayal of trust and others would call an act of heroism. Donald Chapman says, “I’ve served my time and now I should be left alone.”Photograph by Eileen TravellOn November 17, 1992, the elderly parents of Donald Arthur Chapman drove to Avenel, New Jersey, to bring their son home. Donald Chapman had been away since 1980, when he turned himself in to police and confessed to kidnapping and raping a young woman. Few of the Chapmans’ neighbors knew the details of his crime. There had been little publicity and no trial, and Chapman’s homecoming failed to stir much interest in the handsome, middle-class town of Wyckoff, where he had grown up and his parents still lived.Avenel is twelve miles south of Newark on Route 1, past a go-go cocktail lounge and a XXX video store. Until recently, a billboard advertising the Hot Tub Club in the Post Road Inn (“Get Wet! $26.95”) marked the turnoff to the Adult Diagnostic and Treatment Center, one of the ";
+// console.log(replaceDates(text));
 // Output: These are some dates: January twenty-second two thousand one, July fourth two thousand one, and November sixth two thousand twenty-three.
+
+// make this in go and the gender2 stuff
+// readablity js in to go
+// build account system with sql
+// rss feeds
+// music inject

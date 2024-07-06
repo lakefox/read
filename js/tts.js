@@ -10,7 +10,7 @@
 //                 },
 //               ],
 //             }
-
+import { replaceDates } from "./date.js";
 export function streamAudio(streamInfo, audioPlayer, trackInfo) {
   return new Promise(async (resolve, reject) => {
     try {
@@ -20,7 +20,7 @@ export function streamAudio(streamInfo, audioPlayer, trackInfo) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          data: cleanTextForCLI(streamInfo.text),
+          data: cleanTextForCLI(replaceDates(streamInfo.text)),
           voice: streamInfo.voice,
         }),
       });
