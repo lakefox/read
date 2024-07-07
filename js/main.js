@@ -2,7 +2,6 @@ import { div, style, State, Fmt, img, a, h2, span } from "./html.js";
 import { getCategory } from "./categories.js";
 import { Player } from "./player.js";
 import { Preview } from "./preview.js";
-import { estimateGender } from "./gender.js";
 
 export class Main extends State {
   constructor(main) {
@@ -35,7 +34,8 @@ export class Main extends State {
     })();
 
     listen("submit", "click", ({ search, pages }) => {
-      fetch(`https://cors.lowsh.workers.dev/?${search.value}`)
+      let url = search.value;
+      fetch(`https://cors.lowsh.workers.dev/?${url}`)
         .then((e) => e.text())
         .then((res) => {
           // Create a temporary container element to parse the HTML
@@ -66,8 +66,9 @@ export class Main extends State {
               doc.querySelector("meta[property='og:image']") || { content: "" }
             ).content,
             text: paragraphs.join("\n"),
-            voice: estimateGender(readabilityDoc.byline),
+            url,
           };
+          console.log(search.value);
           localStorage.setItem(page.id, JSON.stringify(page));
           pages.push(page);
           search.value = "";

@@ -1,0 +1,239 @@
+<!-- embed.html -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      .audio-player {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: -webkit-fill-available;
+        background: rgb(61 61 61);
+        padding: 20px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        font-family: sans-serif;
+        height: calc(100% - 40px);
+      }
+      .background-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0.2;
+      }
+      .controls {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .main {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 97%;
+      }
+      .play-pause {
+        background: none;
+        border: none;
+        color: #fff;
+        font-size: 16px;
+        cursor: pointer;
+        outline: none;
+        display: flex;
+        align-items: center;
+      }
+      .play-pause svg {
+        width: 24px;
+        height: 24px;
+      }
+      .progress-container {
+        position: relative;
+        flex: 1;
+        height: 5px;
+        background: #969696;
+        margin: 0 10px;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      .progress {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        background: #bdbdbd;
+        border-radius: 5px;
+      }
+      .current-time,
+      .duration {
+        font-size: 14px;
+        color: #c4c4c4;
+        z-index: 1;
+        position: relative;
+        margin: 0px 4px;
+      }
+      audio {
+        display: none;
+      }
+      .site {
+        color: #7a7a7a;
+        font-size: 11px;
+        margin-bottom: 10px;
+      }
+      .title {
+        margin-bottom: 3px;
+      }
+      .info {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        justify-content: space-between;
+        color: #969696;
+        font-size: 11px;
+        font-family: monospace;
+      }
+      .trackInfo {
+        margin-bottom: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="audio-player">
+      <img id="background" class="background-image" src="{{.Image}}" />
+      <audio id="audio" src="{{.AudioURL}}" controls></audio>
+      <div class="main">
+        <div class="trackInfo">
+          <div class="site">{{.Site}} / {{.Category}}</div>
+          <div class="title">{{.Title}}</div>
+          <div class="info">
+            <div class="byline">{{.Author}}</div>
+            <div class="date">{{.Date}}</div>
+          </div>
+        </div>
+        <div class="controls">
+          <button id="play-pause" class="play-pause">
+            <svg
+              id="play-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M8 5v14l11-7z" />
+            </svg>
+            <svg
+              id="pause-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              style="display: none"
+            >
+              <path d="M6 19h4V5H6zm8-14v14h4V5z" />
+            </svg>
+          </button>
+          <div class="progress-container">
+            <div id="progress" class="progress"></div>
+          </div>
+          <span class="current-time">0:00</span> /
+          <span class="duration">0:00</span>
+        </div>
+      </div>
+    </div>
+    <script>
+      // Add your JavaScript to control the audio player here
+      const audio = document.getElementById("audio");
+      const playPauseButton = document.getElementById("play-pause");
+      const playIcon = document.getElementById("play-icon");
+      const pauseIcon = document.getElementById("pause-icon");
+      const progressContainer = document.querySelector(".progress-container");
+      const progress = document.getElementById("progress");
+      const currentTimeElem = document.querySelector(".current-time");
+      const durationElem = document.querySelector(".duration");
+
+      playPauseButton.addEventListener("click", () => {
+        if (audio.paused) {
+          audio.play();
+          playIcon.style.display = "none";
+          pauseIcon.style.display = "block";
+        } else {
+          audio.pause();
+          playIcon.style.display = "block";
+          pauseIcon.style.display = "none";
+        }
+      });
+
+      audio.addEventListener("timeupdate", updateProgress);
+      progressContainer.addEventListener("click", setProgress);
+
+      function updateProgress() {
+        let { duration, currentTime } = audio;
+        // Handle cases where the duration is not available
+        if (isNaN(duration) || !isFinite(duration)) {
+          duration = audio.buffered.length ? audio.buffered.end(0) : 0;
+        }
+        const progressPercent = (currentTime / duration) * 100;
+        progress.style.width = `${progressPercent}%`;
+        currentTimeElem.textContent = formatTime(currentTime);
+        durationElem.textContent = formatTime(duration);
+      }
+
+      function setProgress(e) {
+        const width = this.clientWidth;
+        const clickX = e.offsetX;
+        let duration = audio.duration;
+        // Handle cases where the duration is not available
+        if (isNaN(duration) || !isFinite(duration)) {
+          duration = audio.buffered.length ? audio.buffered.end(0) : 0;
+        }
+        audio.currentTime = (clickX / width) * duration;
+      }
+
+      function formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${minutes}:${secs < 10 ? "0" : ""}${secs}`;
+      }
+
+      let trackInfo = {
+        title: "{{.Title}}",
+        artist: "{{.Author}}",
+        album: "{{.Site}}",
+        artwork: [
+          {
+            src: "{{.Image}}",
+            sizes: "512x512",
+            type: "image/jpeg",
+          },
+        ],
+      };
+
+      // Set up Media Session API
+      if ("mediaSession" in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata(trackInfo);
+
+        // Set action handlers (optional)
+        navigator.mediaSession.setActionHandler("play", () => {
+          a.play();
+        });
+        navigator.mediaSession.setActionHandler("pause", () => {
+          a.pause();
+        });
+        navigator.mediaSession.setActionHandler("seekbackward", (details) => {
+          a.currentTime = Math.max(
+            a.currentTime - (details.seekOffset || 10),
+            0
+          );
+        });
+        navigator.mediaSession.setActionHandler("seekforward", (details) => {
+          a.currentTime = Math.min(
+            a.currentTime + (details.seekOffset || 10),
+            a.duration
+          );
+        });
+      }
+    </script>
+  </body>
+</html>

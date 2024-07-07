@@ -47,6 +47,7 @@ export class Preview extends State {
           ).content,
           text: paragraphs.join("\n"),
           cont: cont,
+          url: suggestion.url,
         };
         console.log(page);
 

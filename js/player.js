@@ -1,5 +1,4 @@
 import { style, State } from "./html.js";
-import { streamAudio, cleanTextForCLI } from "./tts.js";
 
 export class Player extends State {
   constructor(page) {
@@ -8,7 +7,12 @@ export class Player extends State {
     let a = document.querySelector("#audio");
     document.querySelector("#background").src = page.image;
 
-    streamAudio({ text: page.text, voice: page.voice }, a, {
+    a.src = `https://api.szn.io/?url=${page.url}`;
+    a.onload = () => {
+      document.getElementById("play-pause").click();
+    };
+
+    let trackInfo = {
       title: page.title,
       artist: page.byline,
       album: page.site,
@@ -19,9 +23,29 @@ export class Player extends State {
           type: "image/jpeg",
         },
       ],
-    }).then((play) => {
-      document.getElementById("play-pause").click();
-    });
+    };
+
+    // Set up Media Session API
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata(trackInfo);
+
+      // Set action handlers (optional)
+      navigator.mediaSession.setActionHandler("play", () => {
+        a.play();
+      });
+      navigator.mediaSession.setActionHandler("pause", () => {
+        a.pause();
+      });
+      navigator.mediaSession.setActionHandler("seekbackward", (details) => {
+        a.currentTime = Math.max(a.currentTime - (details.seekOffset || 10), 0);
+      });
+      navigator.mediaSession.setActionHandler("seekforward", (details) => {
+        a.currentTime = Math.min(
+          a.currentTime + (details.seekOffset || 10),
+          a.duration
+        );
+      });
+    }
   }
 }
 
