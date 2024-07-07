@@ -169,11 +169,6 @@ func streamAudio(w http.ResponseWriter, r *http.Request) {
 	}
 
 	opt := fetchDoc(queryURL)
-	if err != nil {
-		log.Printf("Error fetching text and voice from URL: %v\n", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
 
 	var voiceModel string
 	if opt.Voice == "male" {
@@ -186,7 +181,7 @@ func streamAudio(w http.ResponseWriter, r *http.Request) {
 	outputFile := fmt.Sprintf("/tmp/audio_%d.raw", time.Now().UnixNano())
 	defer os.Remove(outputFile)
 
-	piperCmd := exec.Command("sh", "-c", "echo '"+opt.Text+"' | /root/server/piper/piper --model /root/"+voiceModel+" --output-raw="+outputFile)
+	piperCmd := exec.Command("sh", "-c", "echo '"+opt.Text+"' | /root/piper/piper --model /root/"+voiceModel+" --output-raw="+outputFile)
 	ffmpegCmd := exec.Command("ffmpeg", "-f", "s16le", "-ar", "22050", "-ac", "1", "-i", outputFile, "-c:a", "libopus", "-f", "webm", "pipe:1")
 
 	piperOut, err := piperCmd.StdoutPipe()
