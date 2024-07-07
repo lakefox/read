@@ -2,26 +2,60 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"main/server/plugins/category"
+	fixtext "main/server/plugins/date"
+	"main/server/plugins/gender"
+	"main/server/plugins/keywords"
 	"net/http"
 	"os"
 	"os/exec"
 	"time"
 
-	"github.com/PuerkitoBio/goquery"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	readability "github.com/go-shiori/go-readability"
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-type RequestData struct {
-	Text  string `json:"data"`
-	Voice string `json:"voice"`
+type Article struct {
+	Keywords    []string
+	Voice       string
+	Category    string
+	Title       string
+	Author      string
+	Image       string
+	Description string
+	Site        string
+	Url         string
+	Text        string
+}
+
+func fetchDoc(url string) Article {
+	article, err := readability.FromURL(url, 30*time.Second)
+	if err != nil {
+		log.Fatalf("failed to parse %s, %v\n", url, err)
+	}
+	text := article.TextContent
+	profile := gender.Profile(text)
+	return Article{
+		Keywords:    keywords.ExtractKeywords(text, 3),
+		Voice:       profile["gender"],
+		Category:    category.GetCategory(text),
+		Title:       article.Title,
+		Author:      article.Byline,
+		Image:       article.Image,
+		Description: article.Excerpt,
+		Site:        article.SiteName,
+		Url:         url,
+		Text:        fixtext.ReplaceDates(text),
+	}
 }
 
 func initDB() (*sql.DB, error) {
@@ -33,7 +67,14 @@ func initDB() (*sql.DB, error) {
 	CREATE TABLE IF NOT EXISTS audio_cache (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		url TEXT NOT NULL,
+		category TEXT NOT NULL,
+		keywords TEXT, -- Store keywords as a JSON string
 		cf_url TEXT NOT NULL,
+		title TEXT NOT NULL,
+		author TEXT NOT NULL,
+		image TEXT NOT NULL,
+		description TEXT NOT NULL,
+		site TEXT NOT NULL,
 		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 	`
@@ -88,28 +129,6 @@ func uploadToR2(filePath, fileName string) (string, error) {
 	return url, nil
 }
 
-func fetchTextAndVoiceFromURL(inputURL string) (string, string, error) {
-	resp, err := http.Get(inputURL)
-	if err != nil {
-		return "", "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", "", fmt.Errorf("failed to fetch URL: %s", inputURL)
-	}
-
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
-	if err != nil {
-		return "", "", err
-	}
-
-	text := doc.Find("#text-element").Text()
-	voice := doc.Find("#voice-element").Text()
-
-	return text, voice, nil
-}
-
 func streamAudio(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
@@ -134,13 +153,6 @@ func streamAudio(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	text, voice, err := fetchTextAndVoiceFromURL(queryURL)
-	if err != nil {
-		log.Printf("Error fetching text and voice from URL: %v\n", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
 	db, err := initDB()
 	if err != nil {
 		log.Printf("Error initializing database: %v\n", err)
@@ -156,18 +168,25 @@ func streamAudio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	opt := fetchDoc(queryURL)
+	if err != nil {
+		log.Printf("Error fetching text and voice from URL: %v\n", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
 	var voiceModel string
-	if voice == "female" {
-		voiceModel = "en_US-amy-medium.onnx"
-	} else {
+	if opt.Voice == "male" {
 		voiceModel = "en_US-joe-medium.onnx"
+	} else {
+		voiceModel = "en_US-amy-medium.onnx"
 	}
 	log.Printf("Using voice model: %s\n", voiceModel)
 
 	outputFile := fmt.Sprintf("/tmp/audio_%d.raw", time.Now().UnixNano())
 	defer os.Remove(outputFile)
 
-	piperCmd := exec.Command("sh", "-c", "echo '"+text+"' | /root/server/piper/piper --model /root/"+voiceModel+" --output-raw="+outputFile)
+	piperCmd := exec.Command("sh", "-c", "echo '"+opt.Text+"' | /root/server/piper/piper --model /root/"+voiceModel+" --output-raw="+outputFile)
 	ffmpegCmd := exec.Command("ffmpeg", "-f", "s16le", "-ar", "22050", "-ac", "1", "-i", outputFile, "-c:a", "libopus", "-f", "webm", "pipe:1")
 
 	piperOut, err := piperCmd.StdoutPipe()
@@ -221,8 +240,12 @@ func streamAudio(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error uploading to Cloudflare R2: %v\n", err)
 		return
 	}
-
-	_, err = db.Exec("INSERT INTO audio_cache (url, cf_url) VALUES (?, ?)", queryURL, uploadedURL)
+	keywordsJSON, err := json.Marshal(opt.Keywords)
+	if err != nil {
+		fmt.Println("Error marshaling keywords:", err)
+		return
+	}
+	_, err = db.Exec("INSERT INTO audio_cache (url, category, keywords, cf_url) VALUES (?, ?, ?, ?)", queryURL, opt.Category, string(keywordsJSON), uploadedURL)
 	if err != nil {
 		log.Printf("Error inserting into database: %v\n", err)
 	}
@@ -233,7 +256,8 @@ func main() {
 		log.Fatalf("Error loading environment variables: %v", err)
 	}
 
-	http.HandleFunc("/stream", streamAudio)
+	http.HandleFunc("/", streamAudio)
+	// http.HandleFunc("/player", streamAudio)
 	log.Println("Server started on port 443")
 	log.Fatal(http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/tts.szn.io/fullchain.pem", "/etc/letsencrypt/live/tts.szn.io/privkey.pem", nil))
 }
