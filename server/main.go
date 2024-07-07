@@ -36,6 +36,7 @@ type Article struct {
 	Site        string
 	Url         string
 	Text        string
+	Date        string
 }
 
 func fetchDoc(url string) (Article, error) {
@@ -55,6 +56,7 @@ func fetchDoc(url string) (Article, error) {
 		Description: article.Excerpt,
 		Site:        article.SiteName,
 		Url:         url,
+		Date:        fixtext.FormatTime(article.PublishedTime),
 		Text:        fixtext.ReplaceDates(text),
 	}, nil
 }
@@ -323,6 +325,7 @@ func embedAudio(w http.ResponseWriter, r *http.Request) {
 		Author   string
 		Site     string
 		Category string
+		Date     string
 	}{
 		AudioURL: audioURL,
 		Image:    article.Image,
@@ -330,6 +333,7 @@ func embedAudio(w http.ResponseWriter, r *http.Request) {
 		Author:   article.Author,
 		Site:     article.Site,
 		Category: article.Category,
+		Date:     article.Date,
 	}
 
 	tmpl, err := template.ParseFiles("/root/server/embed.html")

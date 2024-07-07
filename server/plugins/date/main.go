@@ -251,3 +251,9 @@ func min(a, b int) int {
 	}
 	return b
 }
+func FormatTime(t *time.Time) string {
+	if t == nil {
+		return ""
+	}
+	return t.Format("Mon Jan 02 2006")
+}
