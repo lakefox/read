@@ -5,17 +5,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
+	"main/models"
+	"main/utils"
+	"net/http"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"main/plugins/category"
 	fixtext "main/plugins/date"
 	"main/plugins/keywords"
 	"main/plugins/rss"
-	"net/http"
-	"net/url"
-	"strings"
-
-	"main/models"
-	"main/utils"
 )
 
 type RequestData struct {
@@ -56,12 +60,21 @@ func Feed(db *sql.DB) http.HandlerFunc {
 		}
 
 		var articles, oldArticles []models.Article
-		for _, v := range urls {
-			items, err := rss.ParseFeed(v)
-			fmt.Println(items)
+		for _, feedURL := range urls {
+			cacheFile := getCacheFileName(feedURL)
+			if fileExists(cacheFile) && !isFileExpired(cacheFile, 6*time.Hour) {
+				cachedArticles, err := readArticlesFromFile(cacheFile)
+				if err == nil {
+					articles = append(articles, cachedArticles...)
+					continue
+				}
+			}
+
+			items, err := rss.ParseFeed(feedURL)
 			if err != nil {
 				log.Fatalf("Error parsing RSS feed: %v", err)
 			} else {
+				var feedArticles []models.Article
 				for _, item := range items {
 					parsedURL, err := url.Parse(item.Link)
 					if err != nil {
@@ -83,13 +96,12 @@ func Feed(db *sql.DB) http.HandlerFunc {
 						Url:         item.Link,
 						Date:        fixtext.FormatTime(&item.Published),
 					}
-					fmt.Println(doc)
-					articles = append(articles, doc)
+					feedArticles = append(feedArticles, doc)
 				}
+				articles = append(articles, feedArticles...)
+				saveArticlesToFile(cacheFile, feedArticles)
 			}
 		}
-
-		fmt.Println(articles)
 
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -136,4 +148,41 @@ func Feed(db *sql.DB) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(responseJSON)
 	}
+}
+
+func getCacheFileName(url string) string {
+	return filepath.Join("/tmp", fmt.Sprintf("%x.json", url))
+}
+
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	return err == nil && !info.IsDir()
+}
+
+func isFileExpired(filename string, maxAge time.Duration) bool {
+	info, err := os.Stat(filename)
+	if err != nil {
+		return true
+	}
+	return time.Since(info.ModTime()) > maxAge
+}
+
+func readArticlesFromFile(filename string) ([]models.Article, error) {
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	var articles []models.Article
+	if err := json.Unmarshal(data, &articles); err != nil {
+		return nil, err
+	}
+	return articles, nil
+}
+
+func saveArticlesToFile(filename string, articles []models.Article) error {
+	data, err := json.Marshal(articles)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(filename, data, 0644)
 }
