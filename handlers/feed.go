@@ -58,6 +58,7 @@ func Feed(db *sql.DB) http.HandlerFunc {
 		var articles, oldArticles []models.Article
 		for _, v := range urls {
 			items, err := rss.ParseFeed(v)
+			fmt.Println(items)
 			if err != nil {
 				log.Fatalf("Error parsing RSS feed: %v", err)
 			} else {
@@ -82,6 +83,7 @@ func Feed(db *sql.DB) http.HandlerFunc {
 						Url:         item.Link,
 						Date:        fixtext.FormatTime(&item.Published),
 					}
+					fmt.Println(doc)
 					articles = append(articles, doc)
 				}
 			}
