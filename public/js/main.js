@@ -14,10 +14,9 @@ export class Main extends State {
     $("cats", document.querySelector("#cats"));
     $("suggested", []);
     $("filter", []);
-    $(
-      "library",
-      "mason"
-    )(() => {
+    $("library", "mason");
+
+    (() => {
       let { pages } = $();
 
       for (const key in localStorage) {
