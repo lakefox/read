@@ -43,7 +43,7 @@ func EmbedAudio(w http.ResponseWriter, r *http.Request) {
 		article.Url = queryURL
 	}
 
-	audioURL := fmt.Sprintf("/?url=%s", queryURL)
+	audioURL := fmt.Sprintf("/play?url=%s", queryURL)
 	data := struct {
 		AudioURL string
 		Image    string

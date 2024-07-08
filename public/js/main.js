@@ -15,7 +15,10 @@ export class Main extends State {
     $("cats", document.querySelector("#cats"));
     $("suggested", []);
     $("filter", []);
-    (() => {
+    $(
+      "library",
+      "mason"
+    )(() => {
       let { pages } = $();
 
       for (const key in localStorage) {
@@ -30,46 +33,16 @@ export class Main extends State {
       });
     })();
 
-    listen("submit", "click", ({ search, pages }) => {
+    listen("submit", "click", ({ search, pages, library }) => {
       let url = search.value;
-      fetch(`https://cors.lowsh.workers.dev/?${url}`)
-        .then((e) => e.text())
+      fetch(`/library/${library}`, {
+        method: "POST",
+        body: JSON.stringify({ url }),
+      })
+        .then((e) => e.json())
         .then((res) => {
-          // Create a temporary container element to parse the HTML
-          let parser = new DOMParser();
-          let doc = parser.parseFromString(res, "text/html");
-
-          // Use Readability on the new document
-          let readabilityDoc = new Readability(doc).parse();
-
-          console.log(readabilityDoc);
-
-          let cont = div``;
-          cont.innerHTML = readabilityDoc.content;
-
-          let paragraphs = [...cont.querySelectorAll("p")].map((p) => {
-            return p.innerText;
-          });
-          let page = {
-            id: new Date().getTime(),
-            title: readabilityDoc.title,
-            byline: readabilityDoc.byline,
-            excerpt: readabilityDoc.excerpt,
-            readingTime: readabilityDoc.length / (236 * 5),
-            date: readabilityDoc.publishedTime,
-            site: readabilityDoc.siteName,
-            catagory: getCategory(readabilityDoc.excerpt),
-            image: (
-              doc.querySelector("meta[property='og:image']") || { content: "" }
-            ).content,
-            text: paragraphs.join("\n"),
-            url,
-          };
-          console.log(search.value);
-          localStorage.setItem(page.id, JSON.stringify(page));
-          pages.push(page);
           search.value = "";
-          $("pages", pages);
+          $("pages", res);
         });
     });
 
