@@ -3,7 +3,6 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -62,7 +61,7 @@ func addArticleToLibrary(w http.ResponseWriter, r *http.Request, db *sql.DB, lib
 	}()
 
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Article added to library and audio download started")
+	getLibraryArticles(w, r, db, libraryName)
 }
 
 func getLibraryArticles(w http.ResponseWriter, r *http.Request, db *sql.DB, libraryName string) {
