@@ -17,20 +17,20 @@ export class Main extends State {
     $("library", "mason");
 
     (() => {
-      let { pages } = $();
-
-      fetch(`/library/${library}`)
-        .then((e) => e.json())
-        .then((res) => {
-          $("pages", res);
-        });
-      $("pages", pages);
       getSuggested().then((posts) => {
         $("suggested", posts);
       });
     })();
 
-    listen("submit", "click", ({ search, pages, library }) => {
+    f(({ library }) => {
+      fetch(`/library/${library}`)
+        .then((e) => e.json())
+        .then((res) => {
+          $("pages", res);
+        });
+    });
+
+    listen("submit", "click", ({ search, library }) => {
       let url = search.value;
       fetch(`/library/${library}`, {
         method: "POST",
