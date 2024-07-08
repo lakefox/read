@@ -108,6 +108,13 @@ func Feed(db *sql.DB) http.HandlerFunc {
 				&article.Url, &article.Category, &article.Keywords, &cachedURL, &article.Title, &article.Author, &article.Image, &article.Description, &article.Site)
 			if err != nil {
 				oldArticles = append(oldArticles, article)
+			} else {
+				utils.DownloadAudio(db, v)
+				err = db.QueryRow("SELECT url, category, keywords, location, title, author, image, description, site FROM audio_cache WHERE url = ?", v).Scan(
+					&article.Url, &article.Category, &article.Keywords, &cachedURL, &article.Title, &article.Author, &article.Image, &article.Description, &article.Site)
+				if err != nil {
+					oldArticles = append(oldArticles, article)
+				}
 			}
 		}
 		utils.ShuffleArticles(articles)
