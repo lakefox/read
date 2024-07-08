@@ -27,10 +27,7 @@ export class Main extends State {
         .then((e) => e.json())
         .then((res) => {
           console.log(res);
-          if (res == null) {
-            res = [];
-          }
-          $("pages", res);
+          $("pages", res || []);
         });
     });
 
