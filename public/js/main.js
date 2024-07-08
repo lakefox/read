@@ -26,6 +26,7 @@ export class Main extends State {
       fetch(`/library/${library}`)
         .then((e) => e.json())
         .then((res) => {
+          console.log(res);
           $("pages", res);
         });
     });
