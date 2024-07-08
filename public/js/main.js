@@ -50,7 +50,7 @@ export class Main extends State {
         let page = pages[pages.length - 1 - i];
         console.log(page);
         let el = Fmt`${div`class="${css.story}"`}
-                        ${div`innerText="${page.site.toUpperCase()} / ${page.catagory.toUpperCase()}" class="${
+                        ${div`innerText="${page.site.toUpperCase()} / ${page.category.toUpperCase()}" class="${
                           css.site
                         }"`}
                         ${a`innerText="${page.title}" class="${css.title}"`}
@@ -81,12 +81,12 @@ export class Main extends State {
       let used = [];
       for (let i = 0; i < suggested.length; i++) {
         let suggest = suggested[i];
-        if (filter.length == 0 || filter.indexOf(suggest.catagory) != -1) {
+        if (filter.length == 0 || filter.indexOf(suggest.category) != -1) {
           let el = Fmt`${div`class="${css.story}" style="margin-bottom: 0"`}
                         ${div`innerText="${suggest.site
                           .split(".")[0]
                           .toUpperCase()} / ${(
-                          suggest.catagory || ""
+                          suggest.category || ""
                         ).toUpperCase()}" class="${css.site}"`}
                         ${a`innerText="${suggest.title}" class="${css.title}"`}
   
@@ -96,20 +96,20 @@ export class Main extends State {
           });
           suggestedCont.appendChild(el);
           if (
-            used.indexOf(suggest.catagory) == -1 &&
-            suggest.catagory != null
+            used.indexOf(suggest.category) == -1 &&
+            suggest.category != null
           ) {
             let c =
-              span`innerText="${suggest.catagory}" class="${css.cats}"`.on(
+              span`innerText="${suggest.category}" class="${css.cats}"`.on(
                 "click",
                 () => {
                   let { filter } = $();
-                  filter.push(suggest.catagory);
+                  filter.push(suggest.category);
                   $("filter", filter);
                 }
               );
             cats.appendChild(c);
-            used.push(suggest.catagory);
+            used.push(suggest.category);
           }
         }
       }
@@ -208,7 +208,7 @@ function getSuggested() {
             title: p.title,
             url: p.url,
             site: p.site,
-            catagory: p.category,
+            category: p.category,
           };
         });
 
