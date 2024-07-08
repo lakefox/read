@@ -62,7 +62,7 @@ func DownloadAudio(db *sql.DB, url string) error {
 		return fmt.Errorf("error marshaling keywords: %v", err)
 	}
 
-	_, err = db.Exec("INSERT INTO audio_cache (url, category, keywords, location, title, author, image, description, site, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, date)",
+	_, err = db.Exec("INSERT INTO audio_cache (url, category, keywords, location, title, author, image, description, site, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		url, opt.Category, string(keywordsJSON), webmFile, opt.Title, opt.Author, opt.Image, opt.Description, opt.Site, opt.Date)
 	if err != nil {
 		return fmt.Errorf("error inserting into database: %v", err)
