@@ -195,7 +195,7 @@ function getSuggested() {
     urls.push(JSON.parse(localStorage[keys[i]]).url);
   }
   return new Promise((resolve, reject) => {
-    fetch(`https://api.szn.io/feed`, {
+    fetch(`https://szn.io/feed`, {
       method: "POST",
       body: JSON.stringify({
         data: urls,
