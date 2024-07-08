@@ -23,6 +23,7 @@ func InitDB() (*sql.DB, error) {
 		image TEXT,
 		description TEXT,
 		site TEXT,
+		date TEXT,
 		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 	CREATE TABLE IF NOT EXISTS rss_feeds (

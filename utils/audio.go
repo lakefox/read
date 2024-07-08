@@ -15,7 +15,6 @@ import (
 func DownloadAudio(db *sql.DB, url string) error {
 	opt, err := FetchDoc(url)
 
-	fmt.Println(opt)
 	if err != nil {
 		return fmt.Errorf("error fetching document: %v", err)
 	}
