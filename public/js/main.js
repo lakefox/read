@@ -48,6 +48,7 @@ export class Main extends State {
       stories.innerHTML = "";
       for (let i = 0; i < pages.length; i++) {
         let page = pages[pages.length - 1 - i];
+        console.log(page);
         let el = Fmt`${div`class="${css.story}"`}
                         ${div`innerText="${page.site.toUpperCase()} / ${page.catagory.toUpperCase()}" class="${
                           css.site
