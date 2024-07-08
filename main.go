@@ -24,5 +24,5 @@ func main() {
 	http.HandleFunc("/library/", handlers.HandleLibrary(db))
 
 	log.Println("Server started on port 443")
-	log.Fatal(http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/api.szn.io/fullchain.pem", "/etc/letsencrypt/live/api.szn.io/privkey.pem", nil))
+	log.Fatal(http.ListenAndServeTLS(":443", "/etc/letsencrypt/live/szn.io/fullchain.pem", "/etc/letsencrypt/live/szn.io/privkey.pem", nil))
 }
