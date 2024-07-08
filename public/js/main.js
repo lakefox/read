@@ -19,12 +19,11 @@ export class Main extends State {
     (() => {
       let { pages } = $();
 
-      for (const key in localStorage) {
-        if (Object.hasOwnProperty.call(localStorage, key)) {
-          const element = localStorage[key];
-          pages.push(JSON.parse(element));
-        }
-      }
+      fetch(`/library/${library}`)
+        .then((e) => e.json())
+        .then((res) => {
+          $("pages", res);
+        });
       $("pages", pages);
       getSuggested().then((posts) => {
         $("suggested", posts);
