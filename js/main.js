@@ -19,10 +19,7 @@ export class Main extends State {
       let { pages } = $();
 
       for (const key in localStorage) {
-        if (
-          Object.hasOwnProperty.call(localStorage, key) &&
-          key != "settings"
-        ) {
+        if (Object.hasOwnProperty.call(localStorage, key)) {
           const element = localStorage[key];
           pages.push(JSON.parse(element));
         }
@@ -220,21 +217,29 @@ let css = style(/* css */ `
 `);
 
 function getSuggested() {
+  let keys = Object.keys(localStorage);
+  let urls = [];
+  for (let i = 0; i < keys.length; i++) {
+    urls.push(JSON.parse(localStorage[keys[i]]).url);
+  }
   return new Promise((resolve, reject) => {
-    fetch(
-      `https://cors.lowsh.workers.dev/?https://www.reddit.com/r/Longreads/top.json?t=month`
-    )
+    fetch(`https://api.szn.io/feed`, {
+      method: "POST",
+      body: JSON.stringify({
+        data: urls,
+      }),
+    })
       .then((e) => e.json())
       .then((d) => {
-        let posts = d.data.children.map((e) => {
-          let p = e.data;
+        let posts = d.data.map((p) => {
           return {
             title: p.title,
             url: p.url,
-            site: p.domain,
-            catagory: getCategory(p.title),
+            site: p.site,
+            catagory: p.category,
           };
         });
+
         resolve(posts);
       });
   });

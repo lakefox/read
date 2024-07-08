@@ -1,4 +1,4 @@
-package main
+package rss
 
 import (
 	"time"
@@ -16,7 +16,7 @@ type FeedItem struct {
 }
 
 // ParseRSSFeed parses the RSS feed from the given URL and returns a slice of FeedItems
-func ParseRSSFeed(url string) ([]FeedItem, error) {
+func ParseFeed(url string) ([]FeedItem, error) {
 	fp := gofeed.NewParser()
 	feed, err := fp.ParseURL(url)
 	if err != nil {
