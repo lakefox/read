@@ -29,7 +29,6 @@ func DownloadAudio(db *sql.DB, url string) error {
 	rawFile := fmt.Sprintf("/tmp/audio_%d.raw", time.Now().UnixNano())
 	webmFile := fmt.Sprintf("/tmp/audio_%d.webm", time.Now().UnixNano())
 	defer os.Remove(rawFile)
-	defer os.Remove(webmFile)
 
 	piperCmd := exec.Command("sh", "-c", fmt.Sprintf("echo '%s' | /root/piper/piper --model /root/%s --output-raw", opt.Text, voiceModel))
 	ffmpegCmd := exec.Command("ffmpeg", "-f", "s16le", "-ar", "22050", "-ac", "1", "-i", "pipe:0", "-c:a", "libopus", "-f", "webm", webmFile)
