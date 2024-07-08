@@ -1,5 +1,4 @@
 import { div, style, State, Fmt, img, a, h2, span } from "./html.js";
-import { getCategory } from "./categories.js";
 import { Player } from "./player.js";
 import { Preview } from "./preview.js";
 

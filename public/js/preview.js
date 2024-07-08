@@ -1,4 +1,3 @@
-import { getCategory } from "./categories.js";
 import { style, State, div, a, img, Fmt } from "./html.js";
 
 export class Preview extends State {
