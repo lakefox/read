@@ -101,26 +101,26 @@ func Feed(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		for _, v := range requestData.Data {
-			var article models.Article
-			var cachedURL string
-			err = db.QueryRow("SELECT url, category, keywords, location, title, author, image, description, site FROM audio_cache WHERE url = ?", v).Scan(
-				&article.Url, &article.Category, &article.Keywords, &cachedURL, &article.Title, &article.Author, &article.Image, &article.Description, &article.Site)
-			if err != nil {
-				oldArticles = append(oldArticles, article)
-			} else {
-				utils.DownloadAudio(db, v)
+		var sorted []models.Article
+
+		if len(requestData.Data) > 0 {
+			for _, v := range requestData.Data {
+				var article models.Article
+				var cachedURL string
 				err = db.QueryRow("SELECT url, category, keywords, location, title, author, image, description, site FROM audio_cache WHERE url = ?", v).Scan(
 					&article.Url, &article.Category, &article.Keywords, &cachedURL, &article.Title, &article.Author, &article.Image, &article.Description, &article.Site)
 				if err != nil {
 					oldArticles = append(oldArticles, article)
 				}
 			}
+			utils.ShuffleArticles(oldArticles)
+			utils.ShuffleArticles(articles)
+			sorted = utils.Rank(articles, oldArticles)
+		} else {
+			utils.ShuffleArticles(articles)
+			sorted = articles
 		}
-		utils.ShuffleArticles(articles)
-		utils.ShuffleArticles(oldArticles)
 
-		sorted := utils.Rank(articles, oldArticles)
 		responsePayload := ResponseData{Data: sorted[0:utils.Min(50, len(sorted))]}
 
 		responseJSON, err := json.Marshal(responsePayload)
