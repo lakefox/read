@@ -87,6 +87,8 @@ func Feed(db *sql.DB) http.HandlerFunc {
 			}
 		}
 
+		fmt.Println(articles)
+
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, "Unable to read request body", http.StatusBadRequest)
