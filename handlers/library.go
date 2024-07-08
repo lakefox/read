@@ -12,30 +12,25 @@ import (
 	"main/utils"
 )
 
-func HandleLibrary(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(pathParts) != 2 || pathParts[0] != "library" {
-		http.Error(w, "Invalid URL path", http.StatusBadRequest)
-		return
-	}
-	libraryName := pathParts[1]
+func HandleLibrary(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+		if len(pathParts) != 2 || pathParts[0] != "library" {
+			http.Error(w, "Invalid URL path", http.StatusBadRequest)
+			return
+		}
+		libraryName := pathParts[1]
 
-	db, err := utils.InitDB()
-	if err != nil {
-		http.Error(w, "Database connection error", http.StatusInternalServerError)
-		return
-	}
-	defer db.Close()
-
-	switch r.Method {
-	case http.MethodPost:
-		addArticleToLibrary(w, r, db, libraryName)
-	case http.MethodGet:
-		getLibraryArticles(w, r, db, libraryName)
-	default:
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		switch r.Method {
+		case http.MethodPost:
+			addArticleToLibrary(w, r, db, libraryName)
+		case http.MethodGet:
+			getLibraryArticles(w, r, db, libraryName)
+		default:
+			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		}
 	}
 }
 
